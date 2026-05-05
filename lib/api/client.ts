@@ -122,6 +122,12 @@ export const apiClient = {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
     }),
+  patch: <T>(path: string, data?: unknown, options?: RequestOptions): Promise<T> =>
+    request<T>(path, {
+      ...options,
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    }),
   delete: <T>(path: string, options?: RequestOptions): Promise<T> =>
     request<T>(path, { ...options, method: 'DELETE' }),
 };
