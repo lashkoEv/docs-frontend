@@ -39,10 +39,5 @@ export interface DocumentCounters {
   total: number;
 }
 
-export interface MemberInvite {
-  userId: number;
-  role: AssignableDocumentRole;
-}
-
 export type GetDocumentsQuery = PaginationQuery;
 export type GetMembersQuery = PaginationQuery;

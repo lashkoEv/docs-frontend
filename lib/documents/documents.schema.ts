@@ -1,10 +1,6 @@
 import { z } from 'zod';
 
-import {
-  DOCUMENT_INVITE_MAX,
-  DOCUMENT_INVITE_MIN,
-  DOCUMENT_TITLE_MAX_LENGTH,
-} from './documents.constants';
+import { DOCUMENT_TITLE_MAX_LENGTH } from './documents.constants';
 import { DocumentRole } from './documents.types';
 
 const titleField = z
@@ -20,6 +16,11 @@ const titleField = z
       ),
   );
 
+const assignableRole = z.union([
+  z.literal(DocumentRole.EDITOR),
+  z.literal(DocumentRole.VIEWER),
+]);
+
 export const createDocumentSchema = z.object({
   title: titleField,
 });
@@ -28,16 +29,8 @@ export const updateDocumentSchema = z.object({
   title: titleField.optional(),
 });
 
-export const memberInviteSchema = z.object({
-  userId: z.number().int().positive(),
-  role: z.union([
-    z.literal(DocumentRole.EDITOR),
-    z.literal(DocumentRole.VIEWER),
-  ]),
-});
-
-export const addMembersSchema = z.object({
-  invites: z.array(memberInviteSchema).min(DOCUMENT_INVITE_MIN).max(DOCUMENT_INVITE_MAX),
+export const updateMemberRoleSchema = z.object({
+  role: assignableRole,
 });
 
 export const transferOwnerSchema = z.object({
@@ -46,5 +39,5 @@ export const transferOwnerSchema = z.object({
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>;
-export type AddMembersInput = z.infer<typeof addMembersSchema>;
+export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export type TransferOwnerInput = z.infer<typeof transferOwnerSchema>;

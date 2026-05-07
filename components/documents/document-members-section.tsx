@@ -5,6 +5,7 @@ import * as React from 'react';
 import { toast } from 'sonner';
 
 import { DocumentMemberItem } from '@/components/documents/document-member-item';
+import { PendingInvitationItem } from '@/components/documents/pending-invitation-item';
 import { ShareDialog } from '@/components/documents/share-dialog';
 import { TransferOwnerDialog } from '@/components/documents/transfer-owner-dialog';
 import { Button } from '@/components/ui/button';
@@ -20,12 +21,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/lib/api/errors';
 import { useAuthStore } from '@/lib/auth';
 import {
+  type AssignableDocumentRole,
+  DOCUMENT_ROLE_LABELS,
   type Document,
   type DocumentMember,
   DocumentRole,
   documentsApi,
   useDocumentDetailStore,
 } from '@/lib/documents';
+import { type Invitation, invitationsApi } from '@/lib/invitations';
 
 interface DocumentMembersSectionProps {
   document: Document;
@@ -36,15 +40,25 @@ export function DocumentMembersSection({
 }: DocumentMembersSectionProps): React.JSX.Element {
   const currentUser = useAuthStore((state) => state.user);
   const members = useDocumentDetailStore((state) => state.members);
+  const pendingInvitations = useDocumentDetailStore(
+    (state) => state.pendingInvitations,
+  );
   const isMembersLoading = useDocumentDetailStore((state) => state.isMembersLoading);
   const reloadMembers = useDocumentDetailStore((state) => state.reloadMembers);
+  const reloadPendingInvitations = useDocumentDetailStore(
+    (state) => state.reloadPendingInvitations,
+  );
 
   const canManage = document.myRole === DocumentRole.OWNER;
 
   const [shareOpen, setShareOpen] = React.useState(false);
   const [memberToRemove, setMemberToRemove] = React.useState<DocumentMember | null>(null);
   const [memberToPromote, setMemberToPromote] = React.useState<DocumentMember | null>(null);
+  const [invitationToRevoke, setInvitationToRevoke] =
+    React.useState<Invitation | null>(null);
   const [isRemoving, setIsRemoving] = React.useState(false);
+  const [isRevoking, setIsRevoking] = React.useState(false);
+  const [updatingRoleUserId, setUpdatingRoleUserId] = React.useState<number | null>(null);
 
   const memberIds = React.useMemo(
     () => members.map((member) => member.user.id),
@@ -70,6 +84,51 @@ export function DocumentMembersSection({
     }
   };
 
+  const handleChangeRole = async (
+    member: DocumentMember,
+    role: AssignableDocumentRole,
+  ): Promise<void> => {
+    if (member.role === role) return;
+    setUpdatingRoleUserId(member.user.id);
+    try {
+      await documentsApi.updateMemberRole(document.id, member.user.id, { role });
+      toast.success(
+        `${member.user.displayName} is now ${DOCUMENT_ROLE_LABELS[role]}`,
+      );
+      await reloadMembers();
+    } catch (error) {
+      if (isApiError(error)) {
+        toast.error(error.message);
+      } else {
+        toast.error('Unable to update role.');
+      }
+    } finally {
+      setUpdatingRoleUserId(null);
+    }
+  };
+
+  const handleRevoke = async (): Promise<void> => {
+    if (!invitationToRevoke) return;
+    setIsRevoking(true);
+    try {
+      await invitationsApi.revoke(document.id, invitationToRevoke.id);
+      toast.success(`Invitation to ${invitationToRevoke.email} revoked`);
+      setInvitationToRevoke(null);
+      await reloadPendingInvitations();
+    } catch (error) {
+      if (isApiError(error)) {
+        toast.error(error.message);
+      } else {
+        toast.error('Unable to revoke invitation');
+      }
+    } finally {
+      setIsRevoking(false);
+    }
+  };
+
+  const showEmptyState =
+    !isMembersLoading && members.length === 0 && pendingInvitations.length === 0;
+
   return (
     <section className="border-border bg-card rounded-xl border">
       <header className="border-border flex items-center justify-between border-b px-4 py-3">
@@ -93,7 +152,7 @@ export function DocumentMembersSection({
             <Skeleton key={index} className="h-12 w-full" />
           ))}
         </div>
-      ) : members.length === 0 ? (
+      ) : showEmptyState ? (
         <p className="text-muted-foreground p-6 text-center text-sm">
           No members yet.
         </p>
@@ -101,12 +160,22 @@ export function DocumentMembersSection({
         <ul className="divide-border divide-y">
           {members.map((member) => (
             <DocumentMemberItem
-              key={member.user.id}
+              key={`m-${member.user.id}`}
               member={member}
               canManage={canManage}
               isCurrentUser={currentUser?.id === member.user.id}
+              isUpdatingRole={updatingRoleUserId === member.user.id}
               onRequestRemove={(toRemove) => setMemberToRemove(toRemove)}
               onRequestTransferOwner={(toPromote) => setMemberToPromote(toPromote)}
+              onChangeRole={handleChangeRole}
+            />
+          ))}
+          {pendingInvitations.map((invitation) => (
+            <PendingInvitationItem
+              key={`i-${invitation.id}`}
+              invitation={invitation}
+              canManage={canManage}
+              onRequestRevoke={(toRevoke) => setInvitationToRevoke(toRevoke)}
             />
           ))}
         </ul>
@@ -159,6 +228,44 @@ export function DocumentMembersSection({
               disabled={isRemoving}
             >
               {isRemoving ? 'Removing...' : 'Remove'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(invitationToRevoke)}
+        onOpenChange={(open) => {
+          if (!open) setInvitationToRevoke(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke invitation?</DialogTitle>
+            <DialogDescription>
+              The invitation link sent to{' '}
+              <span className="text-foreground font-medium">
+                {invitationToRevoke?.email}
+              </span>{' '}
+              will stop working.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setInvitationToRevoke(null)}
+              disabled={isRevoking}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleRevoke}
+              disabled={isRevoking}
+            >
+              {isRevoking ? 'Revoking...' : 'Revoke'}
             </Button>
           </DialogFooter>
         </DialogContent>

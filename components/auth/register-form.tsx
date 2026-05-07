@@ -18,31 +18,54 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { isApiError } from '@/lib/api/errors';
 import { authApi, RegisterInput, registerSchema, useAuthStore } from '@/lib/auth';
 import { APP_ROUTES } from '@/lib/shared';
 
-export function RegisterForm(): React.JSX.Element {
+interface RegisterFormProps {
+  invitationToken?: string;
+  prefilledEmail?: string;
+}
+
+export function RegisterForm({
+  invitationToken,
+  prefilledEmail,
+}: RegisterFormProps): React.JSX.Element {
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { email: '', password: '', displayName: '' },
+    defaultValues: {
+      email: prefilledEmail ?? '',
+      password: '',
+      confirmPassword: '',
+      displayName: '',
+      invitationToken,
+    },
   });
+
+  const isEmailLocked = Boolean(invitationToken && prefilledEmail);
 
   const onSubmit = async (values: RegisterInput): Promise<void> => {
     setIsSubmitting(true);
     try {
-      const { session, user } = await authApi.register(values);
+      const { confirmPassword, ...payload } = values;
+      void confirmPassword;
+      const { session, user, redirectDocumentId } = await authApi.register(payload);
       setSession({
         accessToken: session.accessToken,
         refreshToken: session.refreshToken,
         user,
       });
       toast.success(`Welcome, ${user.displayName}`);
-      router.replace(APP_ROUTES.DOCUMENTS);
+      if (redirectDocumentId !== undefined) {
+        router.replace(`${APP_ROUTES.DOCUMENTS}/${redirectDocumentId}`);
+      } else {
+        router.replace(APP_ROUTES.DOCUMENTS);
+      }
     } catch (error) {
       if (isApiError(error)) {
         toast.error(error.message);
@@ -88,9 +111,15 @@ export function RegisterForm(): React.JSX.Element {
                   placeholder="jane.doe@example.com"
                   autoComplete="email"
                   className="h-10"
+                  readOnly={isEmailLocked}
                   {...field}
                 />
               </FormControl>
+              {isEmailLocked ? (
+                <FormDescription>
+                  Email is locked to match your invitation.
+                </FormDescription>
+              ) : null}
               <FormMessage />
             </FormItem>
           )}
@@ -103,8 +132,7 @@ export function RegisterForm(): React.JSX.Element {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input
-                  type="password"
+                <PasswordInput
                   autoComplete="new-password"
                   className="h-10"
                   {...field}
@@ -118,6 +146,24 @@ export function RegisterForm(): React.JSX.Element {
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirm password</FormLabel>
+              <FormControl>
+                <PasswordInput
+                  autoComplete="new-password"
+                  className="h-10"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? 'Creating account...' : 'Create account'}
         </Button>
@@ -125,7 +171,14 @@ export function RegisterForm(): React.JSX.Element {
         <p className="text-muted-foreground text-center text-sm">
           Already have an account?{' '}
           <Link
-            href={APP_ROUTES.LOGIN}
+            href={
+              invitationToken
+                ? `${APP_ROUTES.LOGIN}?${new URLSearchParams({
+                    invitationToken,
+                    ...(prefilledEmail ? { email: prefilledEmail } : {}),
+                  }).toString()}`
+                : APP_ROUTES.LOGIN
+            }
             className="text-foreground font-medium underline-offset-4 hover:underline"
           >
             Sign in

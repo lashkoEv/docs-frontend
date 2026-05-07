@@ -14,12 +14,14 @@ export interface SessionTokens {
 export interface UserSession {
   session: SessionTokens;
   user: AuthUser;
+  redirectDocumentId?: number;
 }
 
 export interface RegisterPayload {
   email: string;
   password: string;
   displayName: string;
+  invitationToken?: string;
 }
 
 export interface LoginPayload {

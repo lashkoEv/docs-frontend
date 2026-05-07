@@ -1,6 +1,6 @@
 'use client';
 
-import { Crown, MoreHorizontal, Trash2, UserCog } from 'lucide-react';
+import { Check, Crown, MoreHorizontal, Trash2, UserCog } from 'lucide-react';
 import * as React from 'react';
 
 import { DocumentRoleBadge } from '@/components/documents/document-role-badge';
@@ -9,32 +9,35 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { type DocumentMember, DocumentRole } from '@/lib/documents';
+import {
+  type AssignableDocumentRole,
+  type DocumentMember,
+  DocumentRole,
+} from '@/lib/documents';
+import { getInitials } from '@/lib/shared';
 
 interface DocumentMemberItemProps {
   member: DocumentMember;
   canManage: boolean;
   isCurrentUser: boolean;
+  isUpdatingRole: boolean;
   onRequestRemove: (member: DocumentMember) => void;
   onRequestTransferOwner: (member: DocumentMember) => void;
-}
-
-function getInitials(displayName: string): string {
-  const parts = displayName.trim().split(/\s+/);
-  const first = parts[0]?.[0] ?? '';
-  const second = parts[1]?.[0] ?? '';
-  return (first + second).toUpperCase() || '?';
+  onChangeRole: (member: DocumentMember, role: AssignableDocumentRole) => void;
 }
 
 export function DocumentMemberItem({
   member,
   canManage,
   isCurrentUser,
+  isUpdatingRole,
   onRequestRemove,
   onRequestTransferOwner,
+  onChangeRole,
 }: DocumentMemberItemProps): React.JSX.Element {
   const isOwner = member.role === DocumentRole.OWNER;
 
@@ -64,11 +67,34 @@ export function DocumentMemberItem({
               size="icon"
               aria-label="Member actions"
               className="size-8"
+              disabled={isUpdatingRole}
             >
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Role</DropdownMenuLabel>
+            <DropdownMenuItem
+              onSelect={() => onChangeRole(member, DocumentRole.EDITOR)}
+            >
+              <span className="inline-flex size-4 items-center justify-center">
+                {member.role === DocumentRole.EDITOR ? (
+                  <Check className="size-4" />
+                ) : null}
+              </span>
+              Editor
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => onChangeRole(member, DocumentRole.VIEWER)}
+            >
+              <span className="inline-flex size-4 items-center justify-center">
+                {member.role === DocumentRole.VIEWER ? (
+                  <Check className="size-4" />
+                ) : null}
+              </span>
+              Viewer
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => onRequestTransferOwner(member)}>
               <Crown className="size-4" />
               Make owner
@@ -79,7 +105,7 @@ export function DocumentMemberItem({
               onSelect={() => onRequestRemove(member)}
             >
               <Trash2 className="size-4" />
-              Remove from document
+              Remove
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

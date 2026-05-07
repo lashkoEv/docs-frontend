@@ -1,11 +1,11 @@
 import { apiClient } from '@/lib/api/client';
-import type { Paginated, PaginationQuery } from '@/lib/shared';
+import { buildPaginationQuery, type Paginated } from '@/lib/shared';
 
 import type {
-  AddMembersInput,
   CreateDocumentInput,
   TransferOwnerInput,
   UpdateDocumentInput,
+  UpdateMemberRoleInput,
 } from './documents.schema';
 import type {
   Document,
@@ -15,14 +15,6 @@ import type {
   GetDocumentsQuery,
   GetMembersQuery,
 } from './documents.types';
-
-function buildPaginationQuery(query: PaginationQuery): string {
-  const params = new URLSearchParams();
-  if (query.limit !== undefined) params.set('limit', String(query.limit));
-  if (query.offset !== undefined) params.set('offset', String(query.offset));
-  const stringified = params.toString();
-  return stringified ? `?${stringified}` : '';
-}
 
 export const documentsApi = {
   list: (query: GetDocumentsQuery = {}): Promise<Paginated<DocumentSummary>> =>
@@ -51,8 +43,12 @@ export const documentsApi = {
       `/documents/${id}/members${buildPaginationQuery(query)}`,
     ),
 
-  addMembers: (id: number, input: AddMembersInput): Promise<DocumentMember[]> =>
-    apiClient.post<DocumentMember[]>(`/documents/${id}/members`, input),
+  updateMemberRole: (
+    id: number,
+    userId: number,
+    input: UpdateMemberRoleInput,
+  ): Promise<DocumentMember> =>
+    apiClient.patch<DocumentMember>(`/documents/${id}/members/${userId}`, input),
 
   removeMember: (id: number, userId: number): Promise<void> =>
     apiClient.delete<void>(`/documents/${id}/members/${userId}`),

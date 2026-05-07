@@ -20,16 +20,25 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { isApiError } from '@/lib/api/errors';
 import { authApi, LoginInput, loginSchema, useAuthStore } from '@/lib/auth';
+import { invitationsApi } from '@/lib/invitations';
 import { APP_ROUTES } from '@/lib/shared';
 
-export function LoginForm(): React.JSX.Element {
+interface LoginFormProps {
+  invitationToken?: string;
+  prefilledEmail?: string;
+}
+
+export function LoginForm({
+  invitationToken,
+  prefilledEmail,
+}: LoginFormProps): React.JSX.Element {
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: prefilledEmail ?? '', password: '' },
   });
 
   const onSubmit = async (values: LoginInput): Promise<void> => {
@@ -42,6 +51,21 @@ export function LoginForm(): React.JSX.Element {
         user,
       });
       toast.success(`Welcome back, ${user.displayName}`);
+
+      if (invitationToken) {
+        try {
+          const accepted = await invitationsApi.accept(invitationToken);
+          router.replace(`${APP_ROUTES.DOCUMENTS}/${accepted.documentId}`);
+          return;
+        } catch (acceptError) {
+          if (isApiError(acceptError)) {
+            toast.error(acceptError.message);
+          }
+          router.replace(`/invite/${invitationToken}`);
+          return;
+        }
+      }
+
       router.replace(APP_ROUTES.DOCUMENTS);
     } catch (error) {
       if (isApiError(error)) {
@@ -102,7 +126,14 @@ export function LoginForm(): React.JSX.Element {
         <p className="text-muted-foreground text-center text-sm">
           Don&apos;t have an account?{' '}
           <Link
-            href={APP_ROUTES.REGISTER}
+            href={
+              invitationToken
+                ? `${APP_ROUTES.REGISTER}?${new URLSearchParams({
+                    invitationToken,
+                    ...(prefilledEmail ? { email: prefilledEmail } : {}),
+                  }).toString()}`
+                : APP_ROUTES.REGISTER
+            }
             className="text-foreground font-medium underline-offset-4 hover:underline"
           >
             Create one

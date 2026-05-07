@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, FileText, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, MoreHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
@@ -10,13 +10,21 @@ import { DeleteDocumentDialog } from '@/components/documents/delete-document-dia
 import { DocumentMembersSection } from '@/components/documents/document-members-section';
 import { DocumentRoleBadge } from '@/components/documents/document-role-badge';
 import { DocumentTitleEditor } from '@/components/documents/document-title-editor';
+import { RealtimeIndicator } from '@/components/documents/realtime-indicator';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   DocumentRole,
   documentsApi,
   useDocumentDetailStore,
 } from '@/lib/documents';
+import { useDocumentRoom } from '@/lib/realtime';
 import { APP_ROUTES } from '@/lib/shared';
 
 export default function DocumentDetailPage(): React.JSX.Element {
@@ -33,6 +41,8 @@ export default function DocumentDetailPage(): React.JSX.Element {
   const reset = useDocumentDetailStore((state) => state.reset);
 
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+
+  const realtime = useDocumentRoom(isValidId ? documentId : null);
 
   React.useEffect(() => {
     if (!isValidId) {
@@ -110,20 +120,36 @@ export default function DocumentDetailPage(): React.JSX.Element {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-3">
           <DocumentTitleEditor document={document} />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <DocumentRoleBadge role={document.myRole} />
+            <RealtimeIndicator
+              status={realtime.status}
+              errorMessage={realtime.errorMessage}
+            />
           </div>
         </div>
         {canDelete ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDeleteOpen(true)}
-            className="text-destructive hover:text-destructive"
-          >
-            <Trash2 className="size-4" />
-            Delete document
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Document actions"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <MoreHorizontal className="size-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-20">
+              <DropdownMenuItem
+                onClick={() => setDeleteOpen(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="size-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : null}
       </header>
 
