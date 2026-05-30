@@ -1,4 +1,6 @@
-import type { DocumentRole } from '@/lib/documents';
+import type Delta from 'quill-delta';
+
+import type { DocumentContentJson, DocumentRole } from '@/lib/documents';
 
 export type ConnectionStatus =
   | 'idle'
@@ -15,8 +17,19 @@ export interface DocumentLeavePayload {
   documentId: number;
 }
 
+export interface DocumentSnapshot {
+  revision: number;
+  content: DocumentContentJson;
+}
+
 export type DocumentJoinAck =
-  | { ok: true; documentId: number; myRole: DocumentRole }
+  | {
+      ok: true;
+      documentId: number;
+      myRole: DocumentRole;
+      revision: number;
+      content: DocumentContentJson;
+    }
   | { ok: false; error: string };
 
 export type DocumentLeaveAck = { ok: true } | { ok: false; error: string };
@@ -27,6 +40,62 @@ export interface PresenceHelloEvent {
   joinedAt: string;
 }
 
+export interface DocumentOperationPayload {
+  documentId: number;
+  baseRevision: number;
+  delta: DocumentContentJson;
+  clientId: string;
+}
+
+export type DocumentOperationAck =
+  | {
+      ok: true;
+      documentId: number;
+      revision: number;
+      transformedDelta: DocumentContentJson;
+    }
+  | { ok: false; error: string };
+
+export interface DocumentOperationBroadcast {
+  documentId: number;
+  revision: number;
+  delta: DocumentContentJson;
+  userId: number;
+  clientId: string;
+}
+
+export interface DocumentCatchupPayload {
+  documentId: number;
+  sinceRevision: number;
+}
+
+export interface DocumentCatchupOp {
+  revision: number;
+  delta: DocumentContentJson;
+  userId: number;
+  clientId: string;
+}
+
+export type DocumentCatchupAck =
+  | {
+      ok: true;
+      documentId: number;
+      ops: DocumentCatchupOp[];
+      currentRevision: number;
+    }
+  | { ok: false; error: string };
+
+export interface DocumentRoleChangedEvent {
+  documentId: number;
+  userId: number;
+  role: DocumentRole | null;
+}
+
+export interface DocumentListChangedEvent {
+  documentId: number;
+  role: DocumentRole | null;
+}
+
 export interface RealtimeState {
   status: ConnectionStatus;
   errorMessage: string | null;
@@ -34,6 +103,44 @@ export interface RealtimeState {
   myRole: DocumentRole | null;
   setStatus: (status: ConnectionStatus, errorMessage?: string | null) => void;
   setJoined: (documentId: number, myRole: DocumentRole) => void;
+  setMyRole: (role: DocumentRole | null) => void;
   clearJoined: () => void;
   reset: () => void;
+}
+
+export type OtStatus = 'idle' | 'sending' | 'syncing' | 'error';
+
+export interface OtClientState {
+  revision: number;
+  status: OtStatus;
+  errorMessage: string | null;
+  hasPending: boolean;
+}
+
+export interface OtSendResult {
+  ok: boolean;
+  error?: string;
+  revision?: number;
+  transformedDelta?: DocumentContentJson;
+}
+
+export type OtSendFn = (payload: {
+  baseRevision: number;
+  delta: DocumentContentJson;
+}) => Promise<OtSendResult>;
+
+export type OtRequestCatchupFn = (sinceRevision: number) => Promise<{
+  ok: boolean;
+  ops?: DocumentCatchupOp[];
+  currentRevision?: number;
+  error?: string;
+}>;
+
+export type OtListener = (state: OtClientState) => void;
+export type OtContentDeltaListener = (delta: Delta) => void;
+export type OtContentSetListener = (content: Delta) => void;
+
+export interface OtClientOptions {
+  send: OtSendFn;
+  requestCatchup: OtRequestCatchupFn;
 }

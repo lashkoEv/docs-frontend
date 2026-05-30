@@ -3,6 +3,8 @@ import { DocumentRole } from './documents.types';
 
 export const DOCUMENT_TITLE_MAX_LENGTH = 200;
 
+export const DOCUMENT_VIEWER_NOTICE = 'You have view-only access to this document.';
+
 export const DOCUMENT_ROLE_LABELS: Record<DocumentRole, string> = {
   [DocumentRole.OWNER]: 'Owner',
   [DocumentRole.EDITOR]: 'Editor',

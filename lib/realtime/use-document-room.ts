@@ -4,13 +4,20 @@ import * as React from 'react';
 
 import { realtimeClient } from './realtime.client';
 import { useRealtimeStore } from './realtime.store';
-import type { ConnectionStatus } from './realtime.types';
+import type {
+  ConnectionStatus,
+  DocumentRoleChangedEvent,
+  DocumentSnapshot,
+} from './realtime.types';
 import type { DocumentRole } from '@/lib/documents';
 
 interface UseDocumentRoomResult {
   status: ConnectionStatus;
   errorMessage: string | null;
   myRole: DocumentRole | null;
+  snapshot: DocumentSnapshot | null;
+  isJoining: boolean;
+  joinError: string | null;
 }
 
 export function useDocumentRoom(documentId: number | null): UseDocumentRoomResult {
@@ -18,13 +25,54 @@ export function useDocumentRoom(documentId: number | null): UseDocumentRoomResul
   const errorMessage = useRealtimeStore((state) => state.errorMessage);
   const myRole = useRealtimeStore((state) => state.myRole);
 
+  const [snapshot, setSnapshot] = React.useState<DocumentSnapshot | null>(null);
+  const [isJoining, setIsJoining] = React.useState(false);
+  const [joinError, setJoinError] = React.useState<string | null>(null);
+
   React.useEffect(() => {
     if (documentId === null) return;
-    void realtimeClient.joinDocument(documentId);
+
+    let cancelled = false;
+    setIsJoining(true);
+    setJoinError(null);
+    setSnapshot(null);
+
+    const join = async (): Promise<void> => {
+      const ack = await realtimeClient.joinDocument(documentId);
+      if (cancelled) return;
+      if (ack.ok) {
+        setSnapshot({ revision: ack.revision, content: ack.content });
+        setJoinError(null);
+      } else {
+        setSnapshot(null);
+        setJoinError(ack.error);
+      }
+      setIsJoining(false);
+    };
+
+    void join();
+
     return () => {
+      cancelled = true;
+      setSnapshot(null);
       void realtimeClient.leaveDocument(documentId);
     };
   }, [documentId]);
 
-  return { status, errorMessage, myRole };
+  React.useEffect(() => {
+    if (documentId === null) return;
+
+    const unsubscribe = realtimeClient.onRoleChanged(
+      (event: DocumentRoleChangedEvent) => {
+        if (event.documentId !== documentId) return;
+        if (event.role === null) {
+          setSnapshot(null);
+          setJoinError('Your access to this document was revoked');
+        }
+      },
+    );
+    return unsubscribe;
+  }, [documentId]);
+
+  return { status, errorMessage, myRole, snapshot, isJoining, joinError };
 }

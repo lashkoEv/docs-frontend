@@ -6,6 +6,7 @@ import type { Paginated } from '@/lib/shared';
 import { documentsApi } from './documents.api';
 import type {
   DocumentCounters,
+  DocumentRole,
   DocumentSummary,
   GetDocumentsQuery,
 } from './documents.types';
@@ -22,6 +23,10 @@ interface DocumentsState {
   fetchList: () => Promise<void>;
   loadMore: () => Promise<void>;
   fetchCounters: () => Promise<void>;
+  applyAccessChange: (change: {
+    documentId: number;
+    role: DocumentRole | null;
+  }) => Promise<void>;
   refresh: () => Promise<void>;
   reset: () => void;
 }
@@ -80,6 +85,66 @@ export const useDocumentsStore = create<DocumentsState>()((set, get) => ({
       set({ counters });
     } catch {
       // counters failure is non-fatal — list page still renders
+    }
+  },
+
+  applyAccessChange: async ({ documentId, role }) => {
+    const { list } = get();
+
+    if (role === null) {
+      if (list?.items.some((item) => item.id === documentId)) {
+        set({
+          list: {
+            items: list.items.filter((item) => item.id !== documentId),
+            pagination: {
+              ...list.pagination,
+              total: Math.max(0, list.pagination.total - 1),
+            },
+          },
+        });
+      }
+      void get().fetchCounters();
+      return;
+    }
+
+    if (list?.items.some((item) => item.id === documentId)) {
+      set({
+        list: {
+          ...list,
+          items: list.items.map((item) =>
+            item.id === documentId ? { ...item, myRole: role } : item,
+          ),
+        },
+      });
+      return;
+    }
+
+    try {
+      const document = await documentsApi.getById(documentId);
+      const summary: DocumentSummary = {
+        id: document.id,
+        title: document.title,
+        revision: document.revision,
+        ownerId: document.ownerId,
+        myRole: document.myRole,
+        createdAt: document.createdAt,
+        updatedAt: document.updatedAt,
+      };
+      const current = get().list;
+      if (current && !current.items.some((item) => item.id === documentId)) {
+        set({
+          list: {
+            items: [summary, ...current.items],
+            pagination: {
+              ...current.pagination,
+              total: current.pagination.total + 1,
+            },
+          },
+        });
+      }
+      void get().fetchCounters();
+    } catch {
+      void get().refresh();
     }
   },
 

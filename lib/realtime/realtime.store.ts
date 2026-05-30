@@ -13,6 +13,8 @@ export const useRealtimeStore = create<RealtimeState>()((set) => ({
   setJoined: (documentId, myRole) =>
     set({ joinedDocumentId: documentId, myRole, status: 'connected' }),
 
+  setMyRole: (role) => set({ myRole: role }),
+
   clearJoined: () => set({ joinedDocumentId: null, myRole: null }),
 
   reset: () =>

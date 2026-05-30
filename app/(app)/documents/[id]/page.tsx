@@ -1,12 +1,13 @@
 'use client';
 
-import { ArrowLeft, FileText, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { toast } from 'sonner';
 
 import { DeleteDocumentDialog } from '@/components/documents/delete-document-dialog';
+import { DocumentEditor } from '@/components/documents/document-editor';
 import { DocumentMembersSection } from '@/components/documents/document-members-section';
 import { DocumentRoleBadge } from '@/components/documents/document-role-badge';
 import { DocumentTitleEditor } from '@/components/documents/document-title-editor';
@@ -154,20 +155,25 @@ export default function DocumentDetailPage(): React.JSX.Element {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="border-border bg-card flex min-h-[400px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-12 text-center">
-          <span className="bg-primary/10 text-primary inline-flex size-12 items-center justify-center rounded-xl">
-            <FileText className="size-6" />
-          </span>
-          <div className="space-y-1">
-            <h2 className="text-base font-semibold tracking-tight">
-              Editor coming soon
-            </h2>
-            <p className="text-muted-foreground mx-auto max-w-sm text-sm leading-relaxed">
-              Real-time collaborative editing lands in the next milestone. For
-              now, you can rename, share, and manage members.
+        {realtime.joinError ? (
+          <section className="border-border bg-card flex min-h-[400px] flex-col items-center justify-center gap-3 rounded-xl border p-12 text-center">
+            <p className="text-foreground text-sm font-medium">
+              {realtime.joinError}
             </p>
-          </div>
-        </section>
+            <p className="text-muted-foreground text-sm">
+              You no longer have access to this document.
+            </p>
+            <Button asChild variant="outline" size="sm" className="mt-2">
+              <Link href={APP_ROUTES.DOCUMENTS}>Back to documents</Link>
+            </Button>
+          </section>
+        ) : (
+          <DocumentEditor
+            documentId={documentId}
+            myRole={realtime.myRole ?? document.myRole}
+            snapshot={realtime.snapshot}
+          />
+        )}
 
         <aside className="lg:sticky lg:top-20 lg:self-start">
           <DocumentMembersSection document={document} />

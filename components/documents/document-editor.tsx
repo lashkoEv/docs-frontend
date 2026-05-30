@@ -1,0 +1,221 @@
+'use client';
+
+import 'quill/dist/quill.snow.css';
+
+import Quill from 'quill';
+import Delta from 'quill-delta';
+import * as React from 'react';
+import { toast } from 'sonner';
+
+import { cn } from '@/lib/utils';
+import { DOCUMENT_VIEWER_NOTICE, DocumentRole } from '@/lib/documents';
+import {
+  OtClient,
+  realtimeClient,
+} from '@/lib/realtime';
+import type {
+  DocumentSnapshot,
+  OtClientState,
+  OtSendFn,
+  OtRequestCatchupFn,
+} from '@/lib/realtime';
+
+interface DocumentEditorProps {
+  documentId: number;
+  myRole: DocumentRole | null;
+  snapshot: DocumentSnapshot | null;
+  className?: string;
+}
+
+export function DocumentEditor({
+  documentId,
+  myRole,
+  snapshot,
+  className,
+}: DocumentEditorProps): React.JSX.Element {
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const quillRef = React.useRef<Quill | null>(null);
+  const otClientRef = React.useRef<OtClient | null>(null);
+  const isApplyingRemoteRef = React.useRef(false);
+
+  const [otState, setOtState] = React.useState<OtClientState>({
+    revision: 0,
+    status: 'idle',
+    errorMessage: null,
+    hasPending: false,
+  });
+
+  const isReadOnly = myRole === DocumentRole.VIEWER || myRole === null;
+
+  const isReadOnlyRef = React.useRef(isReadOnly);
+  React.useEffect(() => {
+    isReadOnlyRef.current = isReadOnly;
+  }, [isReadOnly]);
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    if (snapshot === null) return;
+
+    const editorHost = document.createElement('div');
+    editorHost.className = 'flex flex-1 flex-col';
+    container.appendChild(editorHost);
+
+    const initialReadOnly = isReadOnlyRef.current;
+    const quill = new Quill(editorHost, {
+      theme: 'snow',
+      readOnly: initialReadOnly,
+      placeholder: initialReadOnly ? '' : 'Start typing…',
+      modules: {
+        toolbar: initialReadOnly
+          ? false
+          : [
+              [{ header: [1, 2, 3, false] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ list: 'ordered' }, { list: 'bullet' }],
+              ['blockquote', 'code-block'],
+              ['link'],
+              ['clean'],
+            ],
+      },
+    });
+
+    isApplyingRemoteRef.current = true;
+    quill.setContents(new Delta(snapshot.content.ops), 'silent');
+    isApplyingRemoteRef.current = false;
+
+    const send: OtSendFn = async (payload) => {
+      const ack = await realtimeClient.sendOperation({
+        documentId,
+        baseRevision: payload.baseRevision,
+        delta: payload.delta,
+      });
+      if (!ack.ok) {
+        return { ok: false, error: ack.error };
+      }
+      return {
+        ok: true,
+        revision: ack.revision,
+        transformedDelta: ack.transformedDelta,
+      };
+    };
+
+    const requestCatchup: OtRequestCatchupFn = async (sinceRevision) => {
+      const ack = await realtimeClient.requestCatchup({
+        documentId,
+        sinceRevision,
+      });
+      if (!ack.ok) {
+        return { ok: false, error: ack.error };
+      }
+      return {
+        ok: true,
+        ops: ack.ops,
+        currentRevision: ack.currentRevision,
+      };
+    };
+
+    const otClient = new OtClient({ send, requestCatchup });
+    otClient.setSnapshot(snapshot);
+
+    const unsubscribeState = otClient.onStateChange((state) => {
+      setOtState(state);
+    });
+
+    const unsubscribeContentDelta = otClient.onContentDelta((delta) => {
+      isApplyingRemoteRef.current = true;
+      quill.updateContents(delta, 'silent');
+      isApplyingRemoteRef.current = false;
+    });
+
+    const unsubscribeRemote = realtimeClient.onRemoteOperation((event) => {
+      if (event.documentId !== documentId) return;
+      if (event.clientId === realtimeClient.socketId()) return;
+      otClient.onRemote(event);
+    });
+
+    const unsubscribeConnectionLost = realtimeClient.onConnectionLost(() => {
+      otClient.suspend();
+    });
+
+    const unsubscribeReconnected = realtimeClient.onReconnected(() => {
+      void otClient.resync();
+    });
+
+    quill.on('text-change', (delta, _oldContents, source) => {
+      if (source !== 'user') return;
+      if (isApplyingRemoteRef.current) return;
+      otClient.apply(delta);
+    });
+
+    quillRef.current = quill;
+    otClientRef.current = otClient;
+
+    return () => {
+      unsubscribeState();
+      unsubscribeContentDelta();
+      unsubscribeRemote();
+      unsubscribeConnectionLost();
+      unsubscribeReconnected();
+      otClient.destroy();
+      otClientRef.current = null;
+      quillRef.current = null;
+      container.innerHTML = '';
+    };
+  }, [documentId, snapshot]);
+
+  React.useEffect(() => {
+    const quill = quillRef.current;
+    if (!quill) return;
+    quill.enable(!isReadOnly);
+  }, [isReadOnly]);
+
+  React.useEffect(() => {
+    if (otState.status !== 'error' || !otState.errorMessage) return;
+    toast.error(otState.errorMessage);
+  }, [otState.status, otState.errorMessage]);
+
+  if (snapshot === null) {
+    return (
+      <section
+        className={cn(
+          'border-border bg-card flex min-h-[400px] flex-col items-center justify-center rounded-xl border p-12 text-center',
+          className,
+        )}
+      >
+        <p className="text-muted-foreground text-sm">Loading document…</p>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      className={cn(
+        'border-border bg-card flex min-h-[400px] flex-col rounded-xl border',
+        className,
+      )}
+    >
+      {isReadOnly ? (
+        <p className="text-muted-foreground border-border bg-muted/30 border-b px-4 py-2 text-xs">
+          {DOCUMENT_VIEWER_NOTICE}
+        </p>
+      ) : null}
+      <div
+        ref={containerRef}
+        className="flex min-h-[360px] flex-1 flex-col text-base leading-relaxed"
+      />
+      <footer className="text-muted-foreground border-border bg-muted/30 flex items-center justify-between rounded-b-xl border-t px-4 py-2 text-[11px]">
+        <span>Revision {otState.revision}</span>
+        <span>{otStatusLabel(otState)}</span>
+      </footer>
+    </section>
+  );
+}
+
+function otStatusLabel(state: OtClientState): string {
+  if (state.status === 'sending') return 'Saving…';
+  if (state.status === 'syncing') return 'Syncing…';
+  if (state.status === 'error') return state.errorMessage ?? 'Error';
+  if (state.hasPending) return 'Pending changes';
+  return 'Saved';
+}
