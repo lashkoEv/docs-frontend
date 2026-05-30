@@ -48,6 +48,16 @@ const presenceCursorHandlers = new Set<PresenceCursorHandler>();
 const connectionLostHandlers = new Set<ConnectionHandler>();
 const reconnectedHandlers = new Set<ConnectionHandler>();
 
+const attemptReconnect = (): void => {
+  if (!socket) {
+    return;
+  }
+  if (socket.connected || socket.active) {
+    return;
+  }
+  socket.connect();
+};
+
 const rejoinAfterReconnect = async (documentId: number): Promise<void> => {
   try {
     const ack = await emitWithAck<DocumentJoinAck>(realtimeEvents.DOCUMENT_JOIN, {
@@ -102,24 +112,31 @@ const ensureSocket = (): Socket => {
   socket.on('disconnect', (reason) => {
     if (reason === 'io client disconnect') {
       store.getState().setStatus('idle');
-    } else {
-      store.getState().setStatus('reconnecting');
-      connectionLostHandlers.forEach((handler) => handler());
+      return;
+    }
+    store.getState().setStatus('reconnecting');
+    connectionLostHandlers.forEach((handler) => handler());
+    if (reason === 'io server disconnect') {
+      attemptReconnect();
     }
   });
 
   socket.on('connect_error', async (error) => {
     const message = error.message ?? '';
-    if (AUTH_ERROR_RE.test(message) && !isRecoveringAuth) {
-      isRecoveringAuth = true;
-      store.getState().setStatus('reconnecting');
-      const refreshed = await apiClient.refreshTokens();
-      isRecoveringAuth = false;
-      if (refreshed) {
-        return;
-      }
+    store.getState().setStatus('reconnecting');
+
+    if (!AUTH_ERROR_RE.test(message) || isRecoveringAuth) {
+      return;
     }
-    store.getState().setStatus('error', message);
+
+    isRecoveringAuth = true;
+    const refreshed = await apiClient.refreshTokens();
+    isRecoveringAuth = false;
+    if (refreshed) {
+      attemptReconnect();
+    } else {
+      store.getState().setStatus('error', 'Session expired');
+    }
   });
 
   socket.on(realtimeEvents.AUTH_ERROR, (payload: { message: string }) => {

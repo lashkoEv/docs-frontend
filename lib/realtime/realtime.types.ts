@@ -73,9 +73,17 @@ export interface DocumentCatchupOp {
 export type DocumentCatchupAck =
   | {
       ok: true;
+      action: 'ops';
       documentId: number;
       ops: DocumentCatchupOp[];
       currentRevision: number;
+    }
+  | {
+      ok: true;
+      action: 'full-resync';
+      documentId: number;
+      currentRevision: number;
+      content: DocumentContentJson;
     }
   | { ok: false; error: string };
 
@@ -158,16 +166,27 @@ export type OtSendFn = (payload: {
   delta: DocumentContentJson;
 }) => Promise<OtSendResult>;
 
-export type OtRequestCatchupFn = (sinceRevision: number) => Promise<{
-  ok: boolean;
-  ops?: DocumentCatchupOp[];
-  currentRevision?: number;
-  error?: string;
-}>;
+export type OtCatchupResult =
+  | {
+      ok: true;
+      action: 'ops';
+      ops: DocumentCatchupOp[];
+      currentRevision: number;
+    }
+  | {
+      ok: true;
+      action: 'full-resync';
+      content: DocumentContentJson;
+      currentRevision: number;
+    }
+  | { ok: false; error?: string };
+
+export type OtRequestCatchupFn = (sinceRevision: number) => Promise<OtCatchupResult>;
 
 export type OtListener = (state: OtClientState) => void;
 export type OtContentDeltaListener = (delta: Delta) => void;
 export type OtContentSetListener = (content: Delta) => void;
+export type OtResyncListener = (info: { droppedPending: boolean }) => void;
 
 export interface OtClientOptions {
   send: OtSendFn;

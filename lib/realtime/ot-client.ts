@@ -11,6 +11,7 @@ import type {
   OtContentDeltaListener,
   OtContentSetListener,
   OtListener,
+  OtResyncListener,
   OtSendResult,
   OtStatus,
 } from './realtime.types';
@@ -32,6 +33,7 @@ export class OtClient {
   private readonly stateListeners = new Set<OtListener>();
   private readonly contentDeltaListeners = new Set<OtContentDeltaListener>();
   private readonly contentSetListeners = new Set<OtContentSetListener>();
+  private readonly resyncListeners = new Set<OtResyncListener>();
 
   constructor(private readonly options: OtClientOptions) {}
 
@@ -44,6 +46,7 @@ export class OtClient {
     this.stateListeners.clear();
     this.contentDeltaListeners.clear();
     this.contentSetListeners.clear();
+    this.resyncListeners.clear();
   }
 
   getState(): OtClientState {
@@ -132,10 +135,18 @@ export class OtClient {
     if (this.destroyed) {
       return;
     }
-    if (!result.ok || !result.ops) {
+    if (!result.ok) {
       this.status = 'error';
       this.errorMessage = result.error ?? 'Catchup failed';
       this.emitState();
+      return;
+    }
+
+    if (result.action === 'full-resync') {
+      this.resetToSnapshot({
+        revision: result.currentRevision,
+        content: result.content,
+      });
       return;
     }
 
@@ -145,11 +156,22 @@ export class OtClient {
       }
       this.applyRemote(new Delta(op.delta.ops), op.revision);
     });
-    if (typeof result.currentRevision === 'number') {
-      this.revision = Math.max(this.revision, result.currentRevision);
-    }
+    this.revision = Math.max(this.revision, result.currentRevision);
     this.status = this.inFlight ? 'sending' : 'idle';
     this.errorMessage = null;
+    this.emitState();
+  }
+
+  private resetToSnapshot(snapshot: DocumentSnapshot): void {
+    const droppedPending = this.inFlight !== null || this.buffered.ops.length > 0;
+    this.committed = new Delta(snapshot.content.ops);
+    this.revision = snapshot.revision;
+    this.inFlight = null;
+    this.buffered = new Delta();
+    this.status = 'idle';
+    this.errorMessage = null;
+    this.emitContentSet(this.committed);
+    this.emitResync({ droppedPending });
     this.emitState();
   }
 
@@ -171,6 +193,13 @@ export class OtClient {
     this.contentSetListeners.add(handler);
     return () => {
       this.contentSetListeners.delete(handler);
+    };
+  }
+
+  onResync(handler: OtResyncListener): () => void {
+    this.resyncListeners.add(handler);
+    return () => {
+      this.resyncListeners.delete(handler);
     };
   }
 
@@ -320,5 +349,9 @@ export class OtClient {
 
   private emitContentSet(content: Delta): void {
     this.contentSetListeners.forEach((listener) => listener(content));
+  }
+
+  private emitResync(info: { droppedPending: boolean }): void {
+    this.resyncListeners.forEach((listener) => listener(info));
   }
 }

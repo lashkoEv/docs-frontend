@@ -139,8 +139,17 @@ export function DocumentEditor({
       if (!ack.ok) {
         return { ok: false, error: ack.error };
       }
+      if (ack.action === 'full-resync') {
+        return {
+          ok: true,
+          action: 'full-resync',
+          content: ack.content,
+          currentRevision: ack.currentRevision,
+        };
+      }
       return {
         ok: true,
+        action: 'ops',
         ops: ack.ops,
         currentRevision: ack.currentRevision,
       };
@@ -157,6 +166,18 @@ export function DocumentEditor({
       isApplyingRemoteRef.current = true;
       quill.updateContents(delta, 'silent');
       isApplyingRemoteRef.current = false;
+    });
+
+    const unsubscribeContentSet = otClient.onContentSet((content) => {
+      isApplyingRemoteRef.current = true;
+      quill.setContents(content, 'silent');
+      isApplyingRemoteRef.current = false;
+    });
+
+    const unsubscribeResync = otClient.onResync(({ droppedPending }) => {
+      if (droppedPending) {
+        toast.warning('Document reloaded — some unsaved changes were lost.');
+      }
     });
 
     const unsubscribeRemote = realtimeClient.onRemoteOperation((event) => {
@@ -257,6 +278,8 @@ export function DocumentEditor({
     return () => {
       unsubscribeState();
       unsubscribeContentDelta();
+      unsubscribeContentSet();
+      unsubscribeResync();
       unsubscribeRemote();
       unsubscribeConnectionLost();
       unsubscribeReconnected();
