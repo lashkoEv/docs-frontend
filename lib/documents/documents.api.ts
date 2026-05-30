@@ -12,6 +12,8 @@ import type {
   DocumentCounters,
   DocumentMember,
   DocumentSummary,
+  DocumentVersion,
+  DocumentVersionContent,
   GetDocumentsQuery,
   GetMembersQuery,
 } from './documents.types';
@@ -55,4 +57,13 @@ export const documentsApi = {
 
   transferOwner: (id: number, input: TransferOwnerInput): Promise<Document> =>
     apiClient.post<Document>(`/documents/${id}/transfer-owner`, input),
+
+  listVersions: (id: number): Promise<DocumentVersion[]> =>
+    apiClient.get<DocumentVersion[]>(`/documents/${id}/versions`),
+
+  getVersion: (id: number, revision: number): Promise<DocumentVersionContent> =>
+    apiClient.get<DocumentVersionContent>(`/documents/${id}/versions/${revision}`),
+
+  restoreVersion: (id: number, revision: number): Promise<Document> =>
+    apiClient.post<Document>(`/documents/${id}/versions/${revision}/restore`),
 };

@@ -39,5 +39,15 @@ export interface DocumentCounters {
   total: number;
 }
 
+export interface DocumentVersion {
+  revision: number;
+  author: User | null;
+  createdAt: string;
+}
+
+export interface DocumentVersionContent extends DocumentVersion {
+  content: DocumentContentJson;
+}
+
 export type GetDocumentsQuery = PaginationQuery;
 export type GetMembersQuery = PaginationQuery;

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowLeft, History, MoreHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
@@ -13,6 +13,7 @@ import { DocumentRoleBadge } from '@/components/documents/document-role-badge';
 import { DocumentTitleEditor } from '@/components/documents/document-title-editor';
 import { PresenceRoster } from '@/components/documents/presence-roster';
 import { RealtimeIndicator } from '@/components/documents/realtime-indicator';
+import { VersionHistoryPanel } from '@/components/documents/version-history-panel';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -43,6 +44,7 @@ export default function DocumentDetailPage(): React.JSX.Element {
   const reset = useDocumentDetailStore((state) => state.reset);
 
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [historyOpen, setHistoryOpen] = React.useState(false);
 
   const realtime = useDocumentRoom(isValidId ? documentId : null);
   const participants = usePresence(isValidId ? documentId : null);
@@ -96,7 +98,10 @@ export default function DocumentDetailPage(): React.JSX.Element {
     );
   }
 
+  const effectiveRole = realtime.myRole ?? document.myRole;
   const canDelete = document.myRole === DocumentRole.OWNER;
+  const canRestore =
+    effectiveRole === DocumentRole.OWNER || effectiveRole === DocumentRole.EDITOR;
 
   const handleDeleted = async (): Promise<void> => {
     try {
@@ -132,29 +137,39 @@ export default function DocumentDetailPage(): React.JSX.Element {
             <PresenceRoster participants={participants} />
           </div>
         </div>
-        {canDelete ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Document actions"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <MoreHorizontal className="size-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-20">
-              <DropdownMenuItem
-                onClick={() => setDeleteOpen(true)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="size-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHistoryOpen(true)}
+          >
+            <History className="size-4" />
+            History
+          </Button>
+          {canDelete ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Document actions"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <MoreHorizontal className="size-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-20">
+                <DropdownMenuItem
+                  onClick={() => setDeleteOpen(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="size-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -190,6 +205,14 @@ export default function DocumentDetailPage(): React.JSX.Element {
           if (!open) setDeleteOpen(false);
         }}
         onDeleted={handleDeleted}
+      />
+
+      <VersionHistoryPanel
+        documentId={documentId}
+        open={historyOpen}
+        canRestore={canRestore}
+        onOpenChange={setHistoryOpen}
+        onRestored={() => setHistoryOpen(false)}
       />
     </main>
   );
