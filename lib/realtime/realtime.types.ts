@@ -34,12 +34,6 @@ export type DocumentJoinAck =
 
 export type DocumentLeaveAck = { ok: true } | { ok: false; error: string };
 
-export interface PresenceHelloEvent {
-  userId: number;
-  documentId: number;
-  joinedAt: string;
-}
-
 export interface DocumentOperationPayload {
   documentId: number;
   baseRevision: number;
@@ -94,6 +88,41 @@ export interface DocumentRoleChangedEvent {
 export interface DocumentListChangedEvent {
   documentId: number;
   role: DocumentRole | null;
+}
+
+export interface PresenceParticipant {
+  userId: number;
+  socketId: string;
+  displayName: string;
+  color: string;
+}
+
+export interface PresenceRange {
+  index: number;
+  length: number;
+}
+
+export interface PresenceStateEvent {
+  documentId: number;
+  participants: PresenceParticipant[];
+}
+
+export interface PresenceJoinedEvent {
+  documentId: number;
+  participant: PresenceParticipant;
+}
+
+export interface PresenceLeftEvent {
+  documentId: number;
+  socketId: string;
+  userId: number;
+}
+
+export interface PresenceCursorEvent {
+  documentId: number;
+  socketId: string;
+  userId: number;
+  range: PresenceRange | null;
 }
 
 export interface RealtimeState {

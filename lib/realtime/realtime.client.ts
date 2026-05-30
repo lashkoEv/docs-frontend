@@ -16,7 +16,11 @@ import type {
   DocumentOperationBroadcast,
   DocumentOperationPayload,
   DocumentRoleChangedEvent,
-  PresenceHelloEvent,
+  PresenceCursorEvent,
+  PresenceJoinedEvent,
+  PresenceLeftEvent,
+  PresenceRange,
+  PresenceStateEvent,
 } from './realtime.types';
 
 let socket: Socket | null = null;
@@ -28,11 +32,19 @@ const AUTH_ERROR_RE = /auth|token|jwt|unauthorized|expired/i;
 type RemoteOperationHandler = (event: DocumentOperationBroadcast) => void;
 type RoleChangedHandler = (event: DocumentRoleChangedEvent) => void;
 type ListChangedHandler = (event: DocumentListChangedEvent) => void;
+type PresenceStateHandler = (event: PresenceStateEvent) => void;
+type PresenceJoinedHandler = (event: PresenceJoinedEvent) => void;
+type PresenceLeftHandler = (event: PresenceLeftEvent) => void;
+type PresenceCursorHandler = (event: PresenceCursorEvent) => void;
 type ConnectionHandler = () => void;
 
 const remoteOperationHandlers = new Set<RemoteOperationHandler>();
 const roleChangedHandlers = new Set<RoleChangedHandler>();
 const listChangedHandlers = new Set<ListChangedHandler>();
+const presenceStateHandlers = new Set<PresenceStateHandler>();
+const presenceJoinedHandlers = new Set<PresenceJoinedHandler>();
+const presenceLeftHandlers = new Set<PresenceLeftHandler>();
+const presenceCursorHandlers = new Set<PresenceCursorHandler>();
 const connectionLostHandlers = new Set<ConnectionHandler>();
 const reconnectedHandlers = new Set<ConnectionHandler>();
 
@@ -46,9 +58,7 @@ const rejoinAfterReconnect = async (documentId: number): Promise<void> => {
       return;
     }
     useRealtimeStore.getState().setJoined(ack.documentId, ack.myRole);
-    for (const handler of reconnectedHandlers) {
-      handler();
-    }
+    reconnectedHandlers.forEach((handler) => handler());
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Reconnect failed';
     useRealtimeStore.getState().setStatus('error', message);
@@ -56,7 +66,9 @@ const rejoinAfterReconnect = async (documentId: number): Promise<void> => {
 };
 
 const ensureSocket = (): Socket => {
-  if (socket) return socket;
+  if (socket) {
+    return socket;
+  }
 
   socket = io(`${API_URL}${REALTIME_NAMESPACE}`, {
     transports: ['websocket'],
@@ -92,9 +104,7 @@ const ensureSocket = (): Socket => {
       store.getState().setStatus('idle');
     } else {
       store.getState().setStatus('reconnecting');
-      for (const handler of connectionLostHandlers) {
-        handler();
-      }
+      connectionLostHandlers.forEach((handler) => handler());
     }
   });
 
@@ -116,18 +126,26 @@ const ensureSocket = (): Socket => {
     store.getState().setStatus('error', payload.message);
   });
 
-  socket.on(realtimeEvents.PRESENCE_HELLO, (event: PresenceHelloEvent) => {
-    if (process.env.NODE_ENV !== 'production') {
-      console.debug('[realtime] presence:hello', event);
-    }
+  socket.on(realtimeEvents.PRESENCE_STATE, (event: PresenceStateEvent) => {
+    presenceStateHandlers.forEach((handler) => handler(event));
+  });
+
+  socket.on(realtimeEvents.PRESENCE_JOINED, (event: PresenceJoinedEvent) => {
+    presenceJoinedHandlers.forEach((handler) => handler(event));
+  });
+
+  socket.on(realtimeEvents.PRESENCE_LEFT, (event: PresenceLeftEvent) => {
+    presenceLeftHandlers.forEach((handler) => handler(event));
+  });
+
+  socket.on(realtimeEvents.PRESENCE_CURSOR, (event: PresenceCursorEvent) => {
+    presenceCursorHandlers.forEach((handler) => handler(event));
   });
 
   socket.on(
     realtimeEvents.DOCUMENT_OPERATION,
     (event: DocumentOperationBroadcast) => {
-      for (const handler of remoteOperationHandlers) {
-        handler(event);
-      }
+      remoteOperationHandlers.forEach((handler) => handler(event));
     },
   );
 
@@ -138,18 +156,14 @@ const ensureSocket = (): Socket => {
       if (state.joinedDocumentId === event.documentId) {
         state.setMyRole(event.role);
       }
-      for (const handler of roleChangedHandlers) {
-        handler(event);
-      }
+      roleChangedHandlers.forEach((handler) => handler(event));
     },
   );
 
   socket.on(
     realtimeEvents.DOCUMENT_LIST_CHANGED,
     (event: DocumentListChangedEvent) => {
-      for (const handler of listChangedHandlers) {
-        handler(event);
-      }
+      listChangedHandlers.forEach((handler) => handler(event));
     },
   );
 
@@ -250,6 +264,41 @@ export const realtimeClient = {
     listChangedHandlers.add(handler);
     return () => {
       listChangedHandlers.delete(handler);
+    };
+  },
+
+  sendCursor(documentId: number, range: PresenceRange | null): void {
+    if (!socket?.connected) {
+      return;
+    }
+    socket.emit(realtimeEvents.PRESENCE_CURSOR, { documentId, range });
+  },
+
+  onPresenceState(handler: PresenceStateHandler): () => void {
+    presenceStateHandlers.add(handler);
+    return () => {
+      presenceStateHandlers.delete(handler);
+    };
+  },
+
+  onPresenceJoined(handler: PresenceJoinedHandler): () => void {
+    presenceJoinedHandlers.add(handler);
+    return () => {
+      presenceJoinedHandlers.delete(handler);
+    };
+  },
+
+  onPresenceLeft(handler: PresenceLeftHandler): () => void {
+    presenceLeftHandlers.add(handler);
+    return () => {
+      presenceLeftHandlers.delete(handler);
+    };
+  },
+
+  onPresenceCursor(handler: PresenceCursorHandler): () => void {
+    presenceCursorHandlers.add(handler);
+    return () => {
+      presenceCursorHandlers.delete(handler);
     };
   },
 

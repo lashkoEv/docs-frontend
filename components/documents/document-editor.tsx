@@ -4,6 +4,7 @@ import 'quill/dist/quill.snow.css';
 
 import Quill from 'quill';
 import Delta from 'quill-delta';
+import QuillCursors from 'quill-cursors';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -11,6 +12,8 @@ import { cn } from '@/lib/utils';
 import { DOCUMENT_VIEWER_NOTICE, DocumentRole } from '@/lib/documents';
 import {
   OtClient,
+  PRESENCE_CURSOR_IDLE_MS,
+  PRESENCE_CURSOR_THROTTLE_MS,
   realtimeClient,
 } from '@/lib/realtime';
 import type {
@@ -18,25 +21,40 @@ import type {
   OtClientState,
   OtSendFn,
   OtRequestCatchupFn,
+  PresenceParticipant,
+  PresenceRange,
 } from '@/lib/realtime';
 
 interface DocumentEditorProps {
   documentId: number;
   myRole: DocumentRole | null;
   snapshot: DocumentSnapshot | null;
+  participants: PresenceParticipant[];
   className?: string;
+}
+
+let cursorsRegistered = false;
+
+function registerCursorsModule(): void {
+  if (cursorsRegistered) {
+    return;
+  }
+  Quill.register('modules/cursors', QuillCursors);
+  cursorsRegistered = true;
 }
 
 export function DocumentEditor({
   documentId,
   myRole,
   snapshot,
+  participants,
   className,
 }: DocumentEditorProps): React.JSX.Element {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const quillRef = React.useRef<Quill | null>(null);
   const otClientRef = React.useRef<OtClient | null>(null);
   const isApplyingRemoteRef = React.useRef(false);
+  const participantsRef = React.useRef<PresenceParticipant[]>(participants);
 
   const [otState, setOtState] = React.useState<OtClientState>({
     revision: 0,
@@ -53,9 +71,19 @@ export function DocumentEditor({
   }, [isReadOnly]);
 
   React.useEffect(() => {
+    participantsRef.current = participants;
+  }, [participants]);
+
+  React.useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
-    if (snapshot === null) return;
+    if (!container) {
+      return;
+    }
+    if (snapshot === null) {
+      return;
+    }
+
+    registerCursorsModule();
 
     const editorHost = document.createElement('div');
     editorHost.className = 'flex flex-1 flex-col';
@@ -67,6 +95,7 @@ export function DocumentEditor({
       readOnly: initialReadOnly,
       placeholder: initialReadOnly ? '' : 'Start typing…',
       modules: {
+        cursors: true,
         toolbar: initialReadOnly
           ? false
           : [
@@ -79,6 +108,8 @@ export function DocumentEditor({
             ],
       },
     });
+
+    const cursors = quill.getModule('cursors') as QuillCursors;
 
     isApplyingRemoteRef.current = true;
     quill.setContents(new Delta(snapshot.content.ops), 'silent');
@@ -129,8 +160,12 @@ export function DocumentEditor({
     });
 
     const unsubscribeRemote = realtimeClient.onRemoteOperation((event) => {
-      if (event.documentId !== documentId) return;
-      if (event.clientId === realtimeClient.socketId()) return;
+      if (event.documentId !== documentId) {
+        return;
+      }
+      if (event.clientId === realtimeClient.socketId()) {
+        return;
+      }
       otClient.onRemote(event);
     });
 
@@ -142,10 +177,78 @@ export function DocumentEditor({
       void otClient.resync();
     });
 
+    const idleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    const dropCursor = (socketId: string): void => {
+      cursors.removeCursor(socketId);
+      const timer = idleTimers.get(socketId);
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        idleTimers.delete(socketId);
+      }
+    };
+
+    const unsubscribeCursor = realtimeClient.onPresenceCursor((event) => {
+      if (event.documentId !== documentId) {
+        return;
+      }
+      if (event.socketId === realtimeClient.socketId()) {
+        return;
+      }
+      if (!event.range) {
+        dropCursor(event.socketId);
+        return;
+      }
+      const participant = participantsRef.current.find(
+        (entry) => entry.socketId === event.socketId,
+      );
+      if (!participant) {
+        return;
+      }
+      cursors.createCursor(event.socketId, participant.displayName, participant.color);
+      cursors.moveCursor(event.socketId, event.range);
+
+      const existing = idleTimers.get(event.socketId);
+      if (existing !== undefined) {
+        clearTimeout(existing);
+      }
+      idleTimers.set(
+        event.socketId,
+        setTimeout(() => dropCursor(event.socketId), PRESENCE_CURSOR_IDLE_MS),
+      );
+    });
+
+    const unsubscribeLeft = realtimeClient.onPresenceLeft((event) => {
+      if (event.documentId !== documentId) {
+        return;
+      }
+      dropCursor(event.socketId);
+    });
+
+    let cursorTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingRange: PresenceRange | null = null;
+    const sendCursorThrottled = (range: PresenceRange | null): void => {
+      pendingRange = range;
+      if (cursorTimer !== null) {
+        return;
+      }
+      cursorTimer = setTimeout(() => {
+        cursorTimer = null;
+        realtimeClient.sendCursor(documentId, pendingRange);
+      }, PRESENCE_CURSOR_THROTTLE_MS);
+    };
+
     quill.on('text-change', (delta, _oldContents, source) => {
-      if (source !== 'user') return;
-      if (isApplyingRemoteRef.current) return;
+      if (source !== 'user') {
+        return;
+      }
+      if (isApplyingRemoteRef.current) {
+        return;
+      }
       otClient.apply(delta);
+    });
+
+    quill.on('selection-change', (range) => {
+      sendCursorThrottled(range ? { index: range.index, length: range.length } : null);
     });
 
     quillRef.current = quill;
@@ -157,6 +260,13 @@ export function DocumentEditor({
       unsubscribeRemote();
       unsubscribeConnectionLost();
       unsubscribeReconnected();
+      unsubscribeCursor();
+      unsubscribeLeft();
+      if (cursorTimer !== null) {
+        clearTimeout(cursorTimer);
+      }
+      idleTimers.forEach((timer) => clearTimeout(timer));
+      idleTimers.clear();
       otClient.destroy();
       otClientRef.current = null;
       quillRef.current = null;
@@ -166,12 +276,16 @@ export function DocumentEditor({
 
   React.useEffect(() => {
     const quill = quillRef.current;
-    if (!quill) return;
+    if (!quill) {
+      return;
+    }
     quill.enable(!isReadOnly);
   }, [isReadOnly]);
 
   React.useEffect(() => {
-    if (otState.status !== 'error' || !otState.errorMessage) return;
+    if (otState.status !== 'error' || !otState.errorMessage) {
+      return;
+    }
     toast.error(otState.errorMessage);
   }, [otState.status, otState.errorMessage]);
 
@@ -213,9 +327,17 @@ export function DocumentEditor({
 }
 
 function otStatusLabel(state: OtClientState): string {
-  if (state.status === 'sending') return 'Saving…';
-  if (state.status === 'syncing') return 'Syncing…';
-  if (state.status === 'error') return state.errorMessage ?? 'Error';
-  if (state.hasPending) return 'Pending changes';
+  if (state.status === 'sending') {
+    return 'Saving…';
+  }
+  if (state.status === 'syncing') {
+    return 'Syncing…';
+  }
+  if (state.status === 'error') {
+    return state.errorMessage ?? 'Error';
+  }
+  if (state.hasPending) {
+    return 'Pending changes';
+  }
   return 'Saved';
 }

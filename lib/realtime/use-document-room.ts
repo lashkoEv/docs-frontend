@@ -30,7 +30,9 @@ export function useDocumentRoom(documentId: number | null): UseDocumentRoomResul
   const [joinError, setJoinError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (documentId === null) return;
+    if (documentId === null) {
+      return;
+    }
 
     let cancelled = false;
     setIsJoining(true);
@@ -39,7 +41,9 @@ export function useDocumentRoom(documentId: number | null): UseDocumentRoomResul
 
     const join = async (): Promise<void> => {
       const ack = await realtimeClient.joinDocument(documentId);
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
       if (ack.ok) {
         setSnapshot({ revision: ack.revision, content: ack.content });
         setJoinError(null);
@@ -60,11 +64,15 @@ export function useDocumentRoom(documentId: number | null): UseDocumentRoomResul
   }, [documentId]);
 
   React.useEffect(() => {
-    if (documentId === null) return;
+    if (documentId === null) {
+      return;
+    }
 
     const unsubscribe = realtimeClient.onRoleChanged(
       (event: DocumentRoleChangedEvent) => {
-        if (event.documentId !== documentId) return;
+        if (event.documentId !== documentId) {
+          return;
+        }
         if (event.role === null) {
           setSnapshot(null);
           setJoinError('Your access to this document was revoked');

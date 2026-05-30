@@ -11,6 +11,7 @@ import { DocumentEditor } from '@/components/documents/document-editor';
 import { DocumentMembersSection } from '@/components/documents/document-members-section';
 import { DocumentRoleBadge } from '@/components/documents/document-role-badge';
 import { DocumentTitleEditor } from '@/components/documents/document-title-editor';
+import { PresenceRoster } from '@/components/documents/presence-roster';
 import { RealtimeIndicator } from '@/components/documents/realtime-indicator';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +26,7 @@ import {
   documentsApi,
   useDocumentDetailStore,
 } from '@/lib/documents';
-import { useDocumentRoom } from '@/lib/realtime';
+import { useDocumentRoom, usePresence } from '@/lib/realtime';
 import { APP_ROUTES } from '@/lib/shared';
 
 export default function DocumentDetailPage(): React.JSX.Element {
@@ -44,6 +45,7 @@ export default function DocumentDetailPage(): React.JSX.Element {
   const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   const realtime = useDocumentRoom(isValidId ? documentId : null);
+  const participants = usePresence(isValidId ? documentId : null);
 
   React.useEffect(() => {
     if (!isValidId) {
@@ -127,6 +129,7 @@ export default function DocumentDetailPage(): React.JSX.Element {
               status={realtime.status}
               errorMessage={realtime.errorMessage}
             />
+            <PresenceRoster participants={participants} />
           </div>
         </div>
         {canDelete ? (
@@ -172,6 +175,7 @@ export default function DocumentDetailPage(): React.JSX.Element {
             documentId={documentId}
             myRole={realtime.myRole ?? document.myRole}
             snapshot={realtime.snapshot}
+            participants={participants}
           />
         )}
 

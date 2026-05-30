@@ -68,7 +68,9 @@ export class OtClient {
 
   apply(rawDelta: Delta | DocumentContentJson): void {
     const localDelta = rawDelta instanceof Delta ? rawDelta : new Delta(rawDelta.ops);
-    if (localDelta.ops.length === 0) return;
+    if (localDelta.ops.length === 0) {
+      return;
+    }
 
     if (this.inFlight === null) {
       this.inFlight = localDelta;
@@ -81,7 +83,9 @@ export class OtClient {
   }
 
   suspend(): void {
-    if (this.suspended) return;
+    if (this.suspended) {
+      return;
+    }
     this.suspended = true;
     if (this.retryTimer !== null) {
       clearTimeout(this.retryTimer);
@@ -93,7 +97,9 @@ export class OtClient {
   }
 
   resume(): void {
-    if (!this.suspended) return;
+    if (!this.suspended) {
+      return;
+    }
     this.suspended = false;
     this.retryDelayMs = otBackoff.baseDelayMs;
     if (this.inFlight !== null) {
@@ -108,7 +114,9 @@ export class OtClient {
 
   async resync(): Promise<void> {
     await this.catchup();
-    if (this.destroyed || this.status === 'error') return;
+    if (this.destroyed || this.status === 'error') {
+      return;
+    }
     this.resume();
   }
 
@@ -121,7 +129,9 @@ export class OtClient {
     this.status = 'syncing';
     this.emitState();
     const result = await this.options.requestCatchup(this.revision);
-    if (this.destroyed) return;
+    if (this.destroyed) {
+      return;
+    }
     if (!result.ok || !result.ops) {
       this.status = 'error';
       this.errorMessage = result.error ?? 'Catchup failed';
@@ -129,10 +139,12 @@ export class OtClient {
       return;
     }
 
-    for (const op of result.ops) {
-      if (op.revision <= this.revision) continue;
+    result.ops.forEach((op) => {
+      if (op.revision <= this.revision) {
+        return;
+      }
       this.applyRemote(new Delta(op.delta.ops), op.revision);
-    }
+    });
     if (typeof result.currentRevision === 'number') {
       this.revision = Math.max(this.revision, result.currentRevision);
     }
@@ -163,8 +175,12 @@ export class OtClient {
   }
 
   private applyRemote(remote: Delta, remoteRevision: number): void {
-    if (remote.ops.length === 0) return;
-    if (remoteRevision <= this.revision) return;
+    if (remote.ops.length === 0) {
+      return;
+    }
+    if (remoteRevision <= this.revision) {
+      return;
+    }
 
     const localStack = (this.inFlight ?? new Delta()).compose(this.buffered);
     const editorDiff = localStack.transform(remote, false);
@@ -191,8 +207,12 @@ export class OtClient {
   }
 
   private async send(): Promise<void> {
-    if (this.destroyed || this.suspended || this.inFlight === null) return;
-    if (this.sending) return;
+    if (this.destroyed || this.suspended || this.inFlight === null) {
+      return;
+    }
+    if (this.sending) {
+      return;
+    }
     this.sending = true;
     try {
       while (this.inFlight !== null && !this.destroyed && !this.suspended) {
@@ -210,13 +230,17 @@ export class OtClient {
             delta: { ops: sentDelta.ops as DocumentContentJson['ops'] },
           });
         } catch (error) {
-          if (this.destroyed || this.suspended) return;
+          if (this.destroyed || this.suspended) {
+            return;
+          }
           const message = error instanceof Error ? error.message : 'Send failed';
           this.scheduleRetry(message);
           return;
         }
 
-        if (this.destroyed || this.suspended) return;
+        if (this.destroyed || this.suspended) {
+          return;
+        }
 
         if (!result.ok) {
           const message = result.error ?? 'Operation rejected';
@@ -260,7 +284,9 @@ export class OtClient {
     const pending = (this.inFlight ?? new Delta()).compose(this.buffered);
     this.inFlight = null;
     this.buffered = new Delta();
-    if (pending.ops.length === 0) return;
+    if (pending.ops.length === 0) {
+      return;
+    }
     const undo = pending.invert(this.committed);
     if (undo.ops.length > 0) {
       this.emitContentDelta(undo);
@@ -285,20 +311,14 @@ export class OtClient {
 
   private emitState(): void {
     const snapshot = this.getState();
-    for (const listener of this.stateListeners) {
-      listener(snapshot);
-    }
+    this.stateListeners.forEach((listener) => listener(snapshot));
   }
 
   private emitContentDelta(delta: Delta): void {
-    for (const listener of this.contentDeltaListeners) {
-      listener(delta);
-    }
+    this.contentDeltaListeners.forEach((listener) => listener(delta));
   }
 
   private emitContentSet(content: Delta): void {
-    for (const listener of this.contentSetListeners) {
-      listener(content);
-    }
+    this.contentSetListeners.forEach((listener) => listener(content));
   }
 }
