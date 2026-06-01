@@ -1,4 +1,4 @@
-import type { PaginationQuery } from '@/lib/shared';
+import { type OrderDirection, type PaginationQuery } from '@/lib/shared';
 import type { User } from '@/lib/users';
 
 export enum DocumentRole {
@@ -49,5 +49,22 @@ export interface DocumentVersionContent extends DocumentVersion {
   content: DocumentContentJson;
 }
 
-export type GetDocumentsQuery = PaginationQuery;
+export enum DocumentFilter {
+  ALL = 'all',
+  OWNED = 'owned',
+  SHARED = 'shared',
+}
+
+export enum DocumentOrderBy {
+  UPDATED_AT = 'updatedAt',
+  CREATED_AT = 'createdAt',
+  TITLE = 'title',
+}
+
+export type GetDocumentsQuery = PaginationQuery & {
+  filter?: DocumentFilter;
+  search?: string;
+  orderBy?: DocumentOrderBy;
+  orderDirection?: OrderDirection;
+};
 export type GetMembersQuery = PaginationQuery;

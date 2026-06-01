@@ -188,7 +188,20 @@ export type OtContentDeltaListener = (delta: Delta) => void;
 export type OtContentSetListener = (content: Delta) => void;
 export type OtResyncListener = (info: { droppedPending: boolean }) => void;
 
+export interface PersistedPending {
+  revision: number;
+  inFlight: DocumentContentJson['ops'];
+  buffered: DocumentContentJson['ops'];
+}
+
+export interface OtRecoveryResult {
+  recovered: boolean;
+  droppedStale: boolean;
+}
+
 export interface OtClientOptions {
   send: OtSendFn;
   requestCatchup: OtRequestCatchupFn;
+  documentId: number;
+  userId: number;
 }

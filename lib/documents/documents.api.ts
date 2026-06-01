@@ -7,20 +7,44 @@ import type {
   UpdateDocumentInput,
   UpdateMemberRoleInput,
 } from './documents.schema';
-import type {
-  Document,
-  DocumentCounters,
-  DocumentMember,
-  DocumentSummary,
-  DocumentVersion,
-  DocumentVersionContent,
-  GetDocumentsQuery,
-  GetMembersQuery,
+import {
+  type Document,
+  type DocumentCounters,
+  DocumentFilter,
+  type DocumentMember,
+  type DocumentSummary,
+  type DocumentVersion,
+  type DocumentVersionContent,
+  type GetDocumentsQuery,
+  type GetMembersQuery,
 } from './documents.types';
 
 export const documentsApi = {
-  list: (query: GetDocumentsQuery = {}): Promise<Paginated<DocumentSummary>> =>
-    apiClient.get<Paginated<DocumentSummary>>(`/documents${buildPaginationQuery(query)}`),
+  list: (query: GetDocumentsQuery = {}): Promise<Paginated<DocumentSummary>> => {
+    const params = new URLSearchParams();
+    if (query.limit !== undefined) {
+      params.set('limit', String(query.limit));
+    }
+    if (query.offset !== undefined) {
+      params.set('offset', String(query.offset));
+    }
+    if (query.filter && query.filter !== DocumentFilter.ALL) {
+      params.set('filter', query.filter);
+    }
+    if (query.search) {
+      params.set('search', query.search);
+    }
+    if (query.orderBy) {
+      params.set('orderBy', query.orderBy);
+    }
+    if (query.orderDirection) {
+      params.set('orderDirection', query.orderDirection);
+    }
+    const queryString = params.toString();
+    return apiClient.get<Paginated<DocumentSummary>>(
+      `/documents${queryString ? `?${queryString}` : ''}`,
+    );
+  },
 
   getCounters: (): Promise<DocumentCounters> =>
     apiClient.get<DocumentCounters>('/documents/counters'),

@@ -117,6 +117,14 @@ body {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+button:not(:disabled),
+[role='button']:not(:disabled),
+a[href],
+label[for],
+summary {
+  cursor: pointer;
+}
+
 .ql-toolbar.ql-snow {
   position: sticky;
   top: 64px;

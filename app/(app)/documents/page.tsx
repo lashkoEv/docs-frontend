@@ -7,12 +7,15 @@ import { CreateDocumentDialog } from '@/components/documents/create-document-dia
 import { DeleteDocumentDialog } from '@/components/documents/delete-document-dialog';
 import { DocumentsCounters } from '@/components/documents/documents-counters';
 import { DocumentsList } from '@/components/documents/documents-list';
+import { DocumentsToolbar } from '@/components/documents/documents-toolbar';
 import { Button } from '@/components/ui/button';
-import { type DocumentSummary, useDocumentsStore } from '@/lib/documents';
+import { DocumentFilter, type DocumentSummary, useDocumentsStore } from '@/lib/documents';
 
 export default function DocumentsPage(): React.JSX.Element {
   const counters = useDocumentsStore((state) => state.counters);
   const refresh = useDocumentsStore((state) => state.refresh);
+  const activeFilter = useDocumentsStore((state) => state.query.filter ?? DocumentFilter.ALL);
+  const setFilter = useDocumentsStore((state) => state.setFilter);
 
   const [createOpen, setCreateOpen] = React.useState(false);
   const [docToDelete, setDocToDelete] = React.useState<DocumentSummary | null>(null);
@@ -36,7 +39,13 @@ export default function DocumentsPage(): React.JSX.Element {
         </Button>
       </header>
 
-      <DocumentsCounters counters={counters} />
+      <DocumentsCounters
+        counters={counters}
+        activeFilter={activeFilter}
+        onSelect={(filter) => void setFilter(filter)}
+      />
+
+      <DocumentsToolbar />
 
       <DocumentsList
         onRequestDelete={(document) => setDocToDelete(document)}

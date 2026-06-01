@@ -42,6 +42,9 @@ interface ShareDialogProps {
   excludeIds: number[];
 }
 
+const pluralize = (count: number, singular: string, plural: string): string =>
+  `${count} ${count === 1 ? singular : plural}`;
+
 export function ShareDialog({
   open,
   onOpenChange,
@@ -184,14 +187,20 @@ export function ShareDialog({
       const result = await invitationsApi.inviteBulk(documentId, { emails, role });
 
       const parts: string[] = [];
-      if (result.granted.length) parts.push(`${result.granted.length} added`);
-      if (result.invited.length) parts.push(`${result.invited.length} invited`);
-      if (result.errors.length)
-        parts.push(`${result.errors.length} error${result.errors.length > 1 ? 's' : ''}`);
-      const summary = parts.join(', ');
+      if (result.granted.length) {
+          const verb = result.granted.length === 1 ? 'has' : 'have';
+          parts.push(`${pluralize(result.granted.length, 'person', 'people')} now ${verb} access`);
+      }
+      if (result.invited.length) {
+          parts.push(`${pluralize(result.invited.length, 'invitation', 'invitations')} sent`);
+      }
+      if (result.errors.length) {
+          parts.push(`${pluralize(result.errors.length, 'recipient', 'recipients')} couldn’t be added`);
+      }
+      const summary = parts.join(' · ');
 
       if (result.errors.length === 0) {
-        toast.success(summary || 'Done');
+        toast.success(summary || 'Nothing to share.');
       } else if (result.granted.length === 0 && result.invited.length === 0) {
         toast.error(summary);
       } else {

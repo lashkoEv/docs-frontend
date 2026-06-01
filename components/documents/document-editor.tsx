@@ -9,6 +9,7 @@ import * as React from 'react';
 import { toast } from 'sonner';
 
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/lib/auth';
 import { DOCUMENT_VIEWER_NOTICE, DocumentRole } from '@/lib/documents';
 import {
   OtClient,
@@ -155,7 +156,8 @@ export function DocumentEditor({
       };
     };
 
-    const otClient = new OtClient({ send, requestCatchup });
+    const userId = useAuthStore.getState().user?.id ?? 0;
+    const otClient = new OtClient({ send, requestCatchup, documentId, userId });
     otClient.setSnapshot(snapshot);
 
     const unsubscribeState = otClient.onStateChange((state) => {
@@ -275,7 +277,20 @@ export function DocumentEditor({
     quillRef.current = quill;
     otClientRef.current = otClient;
 
+    const recovery = otClient.recoverPending();
+    if (recovery.recovered) {
+      toast.info('Restored your unsent changes.');
+    } else if (recovery.droppedStale) {
+      toast.warning('Document changed while you were away — some unsaved changes were lost.');
+    }
+
+    const handleBeforeUnload = (): void => {
+      otClient.flushPersist();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       unsubscribeState();
       unsubscribeContentDelta();
       unsubscribeContentSet();

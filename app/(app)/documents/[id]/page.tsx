@@ -172,7 +172,7 @@ export default function DocumentDetailPage(): React.JSX.Element {
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {realtime.joinError ? (
           <section className="border-border bg-card flex min-h-[400px] flex-col items-center justify-center gap-3 rounded-xl border p-12 text-center">
             <p className="text-foreground text-sm font-medium">

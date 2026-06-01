@@ -15,21 +15,16 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   type DocumentSummary,
+  DocumentFilter,
   DocumentRole,
   useDocumentsStore,
 } from '@/lib/documents';
-import { APP_ROUTES } from '@/lib/shared';
+import { APP_ROUTES, formatShortDate } from '@/lib/shared';
 
 interface DocumentsListProps {
   onRequestDelete: (document: DocumentSummary) => void;
   onRequestNew: () => void;
 }
-
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-});
 
 export function DocumentsList({
   onRequestDelete,
@@ -41,6 +36,10 @@ export function DocumentsList({
   const error = useDocumentsStore((state) => state.error);
   const fetchList = useDocumentsStore((state) => state.fetchList);
   const loadMore = useDocumentsStore((state) => state.loadMore);
+  const search = useDocumentsStore((state) => state.query.search);
+  const filter = useDocumentsStore((state) => state.query.filter);
+
+  const hasActiveQuery = Boolean(search) || (filter !== undefined && filter !== DocumentFilter.ALL);
 
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
   const hasMore = list ? list.items.length < list.pagination.total : false;
@@ -89,14 +88,20 @@ export function DocumentsList({
           <FileText className="size-6" />
         </span>
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">No documents yet</h2>
+          <h2 className="text-lg font-semibold tracking-tight">
+            {hasActiveQuery ? 'No documents found' : 'No documents yet'}
+          </h2>
           <p className="text-muted-foreground mx-auto max-w-sm text-sm leading-relaxed">
-            Create your first document to start writing with your team.
+            {hasActiveQuery
+              ? 'Try a different search term or filter.'
+              : 'Create your first document to start writing with your team.'}
           </p>
         </div>
-        <Button size="sm" onClick={onRequestNew}>
-          New document
-        </Button>
+        {!hasActiveQuery && (
+          <Button size="sm" onClick={onRequestNew}>
+            New document
+          </Button>
+        )}
       </div>
     );
   }
@@ -119,7 +124,7 @@ export function DocumentsList({
               <div className="flex flex-1 flex-col overflow-hidden">
                 <span className="truncate text-sm font-medium">{document.title}</span>
                 <span className="text-muted-foreground text-xs">
-                  Updated {dateFormatter.format(new Date(document.updatedAt))}
+                  Updated {formatShortDate(document.updatedAt)}
                 </span>
               </div>
             </Link>

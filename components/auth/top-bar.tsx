@@ -6,6 +6,7 @@ import * as React from 'react';
 import { toast } from 'sonner';
 
 import { LogoLink } from '@/components/brand/logo-link';
+import { NotificationsBell } from '@/components/notifications/notifications-bell';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -46,12 +47,13 @@ export function TopBar(): React.JSX.Element {
 
       <div className="flex items-center gap-2">
         <ThemeToggle />
+        {user ? <NotificationsBell /> : null}
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="hover:bg-muted/40 h-10 gap-2 px-2"
+                className="h-9 gap-2 px-2"
                 disabled={isLoggingOut}
               >
                 <span className="bg-primary/10 text-primary inline-flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">

@@ -15,7 +15,10 @@ export function LogoLink(props: LogoLinkProps): React.JSX.Element {
   const href = accessToken ? APP_ROUTES.DOCUMENTS : APP_ROUTES.HOME;
 
   return (
-    <Link href={href} className="rounded-sm focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none">
+    <Link
+      href={href}
+      className="inline-flex items-center rounded-sm focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none"
+    >
       <Logo {...props} />
     </Link>
   );

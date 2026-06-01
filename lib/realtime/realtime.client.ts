@@ -2,6 +2,7 @@ import { io, Socket } from 'socket.io-client';
 
 import { apiClient } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/auth';
+import type { Notification } from '@/lib/notifications';
 import { API_URL } from '@/lib/shared';
 
 import { realtimeEvents, REALTIME_NAMESPACE } from './realtime.constants';
@@ -36,6 +37,7 @@ type PresenceStateHandler = (event: PresenceStateEvent) => void;
 type PresenceJoinedHandler = (event: PresenceJoinedEvent) => void;
 type PresenceLeftHandler = (event: PresenceLeftEvent) => void;
 type PresenceCursorHandler = (event: PresenceCursorEvent) => void;
+type NotificationNewHandler = (notification: Notification) => void;
 type ConnectionHandler = () => void;
 
 const remoteOperationHandlers = new Set<RemoteOperationHandler>();
@@ -45,6 +47,7 @@ const presenceStateHandlers = new Set<PresenceStateHandler>();
 const presenceJoinedHandlers = new Set<PresenceJoinedHandler>();
 const presenceLeftHandlers = new Set<PresenceLeftHandler>();
 const presenceCursorHandlers = new Set<PresenceCursorHandler>();
+const notificationNewHandlers = new Set<NotificationNewHandler>();
 const connectionLostHandlers = new Set<ConnectionHandler>();
 const reconnectedHandlers = new Set<ConnectionHandler>();
 
@@ -184,6 +187,10 @@ const ensureSocket = (): Socket => {
     },
   );
 
+  socket.on(realtimeEvents.NOTIFICATION_NEW, (notification: Notification) => {
+    notificationNewHandlers.forEach((handler) => handler(notification));
+  });
+
   return socket;
 };
 
@@ -281,6 +288,13 @@ export const realtimeClient = {
     listChangedHandlers.add(handler);
     return () => {
       listChangedHandlers.delete(handler);
+    };
+  },
+
+  onNotificationNew(handler: NotificationNewHandler): () => void {
+    notificationNewHandlers.add(handler);
+    return () => {
+      notificationNewHandlers.delete(handler);
     };
   },
 

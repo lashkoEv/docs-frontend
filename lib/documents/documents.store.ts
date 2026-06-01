@@ -3,7 +3,10 @@ import { create } from 'zustand';
 import { isApiError } from '@/lib/api/errors';
 import type { Paginated } from '@/lib/shared';
 
+import { OrderDirection } from '@/lib/shared';
+
 import { documentsApi } from './documents.api';
+import { DocumentFilter, DocumentOrderBy } from './documents.types';
 import type {
   DocumentCounters,
   DocumentRole,
@@ -20,6 +23,9 @@ interface DocumentsState {
   error: string | null;
 
   setQuery: (query: GetDocumentsQuery) => void;
+  setFilter: (filter: DocumentFilter) => Promise<void>;
+  setSearch: (search: string) => Promise<void>;
+  setOrder: (orderBy: DocumentOrderBy, orderDirection: OrderDirection) => Promise<void>;
   fetchList: () => Promise<void>;
   loadMore: () => Promise<void>;
   fetchCounters: () => Promise<void>;
@@ -32,7 +38,14 @@ interface DocumentsState {
 }
 
 const PAGE_SIZE = 10;
-const initialQuery: GetDocumentsQuery = { limit: PAGE_SIZE, offset: 0 };
+const initialQuery: GetDocumentsQuery = {
+  limit: PAGE_SIZE,
+  offset: 0,
+  filter: DocumentFilter.ALL,
+  search: undefined,
+  orderBy: DocumentOrderBy.UPDATED_AT,
+  orderDirection: OrderDirection.DESC,
+};
 
 export const useDocumentsStore = create<DocumentsState>()((set, get) => ({
   list: null,
@@ -43,6 +56,26 @@ export const useDocumentsStore = create<DocumentsState>()((set, get) => ({
   error: null,
 
   setQuery: (query) => set({ query }),
+
+  setFilter: async (filter) => {
+    if (get().query.filter === filter) return;
+    set({ query: { ...get().query, filter, offset: 0 } });
+    await get().fetchList();
+  },
+
+  setSearch: async (search) => {
+    const next = search.trim() || undefined;
+    if (get().query.search === next) return;
+    set({ query: { ...get().query, search: next, offset: 0 } });
+    await get().fetchList();
+  },
+
+  setOrder: async (orderBy, orderDirection) => {
+    const { query } = get();
+    if (query.orderBy === orderBy && query.orderDirection === orderDirection) return;
+    set({ query: { ...query, orderBy, orderDirection, offset: 0 } });
+    await get().fetchList();
+  },
 
   fetchList: async () => {
     set({ isLoading: true, error: null, query: { ...get().query, offset: 0 } });
@@ -66,13 +99,22 @@ export const useDocumentsStore = create<DocumentsState>()((set, get) => ({
     set({ isLoadingMore: true });
     try {
       const next = await documentsApi.list({ ...query, limit, offset });
-      set({
-        list: {
-          items: [...list.items, ...next.items],
-          pagination: next.pagination,
-        },
-        isLoadingMore: false,
+      const current = get().list;
+      if (!current || current !== list) {
+        set({ isLoadingMore: false });
+        return;
+      }
+
+      const seen = new Set(current.items.map((item) => item.id));
+      const items = [...current.items];
+      next.items.forEach((item) => {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          items.push(item);
+        }
       });
+
+      set({ list: { items, pagination: next.pagination }, isLoadingMore: false });
     } catch (error) {
       const message = isApiError(error) ? error.message : 'Failed to load more';
       set({ isLoadingMore: false, error: message });
@@ -119,33 +161,18 @@ export const useDocumentsStore = create<DocumentsState>()((set, get) => ({
       return;
     }
 
+    const loaded = list?.items.length ?? PAGE_SIZE;
     try {
-      const document = await documentsApi.getById(documentId);
-      const summary: DocumentSummary = {
-        id: document.id,
-        title: document.title,
-        revision: document.revision,
-        ownerId: document.ownerId,
-        myRole: document.myRole,
-        createdAt: document.createdAt,
-        updatedAt: document.updatedAt,
-      };
-      const current = get().list;
-      if (current && !current.items.some((item) => item.id === documentId)) {
-        set({
-          list: {
-            items: [summary, ...current.items],
-            pagination: {
-              ...current.pagination,
-              total: current.pagination.total + 1,
-            },
-          },
-        });
-      }
-      void get().fetchCounters();
+      const refreshed = await documentsApi.list({
+        ...get().query,
+        limit: Math.max(loaded, PAGE_SIZE),
+        offset: 0,
+      });
+      set({ list: refreshed });
     } catch {
       void get().refresh();
     }
+    void get().fetchCounters();
   },
 
   refresh: async () => {

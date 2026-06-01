@@ -12,12 +12,15 @@ export const realtimeEvents = {
   PRESENCE_JOINED: 'presence:joined',
   PRESENCE_LEFT: 'presence:left',
   PRESENCE_CURSOR: 'presence:cursor',
+  NOTIFICATION_NEW: 'notification:new',
 } as const;
 
 export const otBackoff = {
   baseDelayMs: 200,
   maxDelayMs: 4000,
 } as const;
+
+export const OT_PERSIST_DEBOUNCE_MS = 500;
 
 export const RATE_LIMITED_RE = /rate.?limit/i;
 

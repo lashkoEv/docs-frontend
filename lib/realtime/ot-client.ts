@@ -2,7 +2,8 @@ import Delta from 'quill-delta';
 
 import type { DocumentContentJson } from '@/lib/documents';
 
-import { otBackoff, RATE_LIMITED_RE } from './realtime.constants';
+import { clearPending, loadPending, savePending } from './pending-storage';
+import { OT_PERSIST_DEBOUNCE_MS, otBackoff, RATE_LIMITED_RE } from './realtime.constants';
 import type {
   DocumentOperationBroadcast,
   DocumentSnapshot,
@@ -11,6 +12,7 @@ import type {
   OtContentDeltaListener,
   OtContentSetListener,
   OtListener,
+  OtRecoveryResult,
   OtResyncListener,
   OtSendResult,
   OtStatus,
@@ -29,6 +31,7 @@ export class OtClient {
   private destroyed: boolean = false;
   private suspended: boolean = false;
   private sending: boolean = false;
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly stateListeners = new Set<OtListener>();
   private readonly contentDeltaListeners = new Set<OtContentDeltaListener>();
@@ -38,6 +41,7 @@ export class OtClient {
   constructor(private readonly options: OtClientOptions) {}
 
   destroy(): void {
+    this.flushPersist();
     this.destroyed = true;
     if (this.retryTimer !== null) {
       clearTimeout(this.retryTimer);
@@ -47,6 +51,66 @@ export class OtClient {
     this.contentDeltaListeners.clear();
     this.contentSetListeners.clear();
     this.resyncListeners.clear();
+  }
+
+  flushPersist(): void {
+    if (this.persistTimer !== null) {
+      clearTimeout(this.persistTimer);
+      this.persistTimer = null;
+    }
+    this.writePersist();
+  }
+
+  recoverPending(): OtRecoveryResult {
+    const persisted = loadPending(this.options.documentId, this.options.userId);
+    if (!persisted) {
+      return { recovered: false, droppedStale: false };
+    }
+
+    if (persisted.revision !== this.revision) {
+      clearPending(this.options.documentId, this.options.userId);
+      return { recovered: false, droppedStale: true };
+    }
+
+    const recovered = new Delta(persisted.inFlight).compose(new Delta(persisted.buffered));
+    if (recovered.ops.length === 0) {
+      clearPending(this.options.documentId, this.options.userId);
+      return { recovered: false, droppedStale: false };
+    }
+
+    this.inFlight = recovered;
+    this.inFlightBaseRev = this.revision;
+    this.buffered = new Delta();
+    this.emitContentDelta(recovered);
+    this.emitState();
+    void this.send();
+    return { recovered: true, droppedStale: false };
+  }
+
+  private schedulePersist(): void {
+    if (this.destroyed) {
+      return;
+    }
+    if (this.persistTimer !== null) {
+      clearTimeout(this.persistTimer);
+    }
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      this.writePersist();
+    }, OT_PERSIST_DEBOUNCE_MS);
+  }
+
+  private writePersist(): void {
+    const hasPending = this.inFlight !== null || this.buffered.ops.length > 0;
+    if (!hasPending) {
+      clearPending(this.options.documentId, this.options.userId);
+      return;
+    }
+    savePending(this.options.documentId, this.options.userId, {
+      revision: this.revision,
+      inFlight: (this.inFlight?.ops ?? []) as DocumentContentJson['ops'],
+      buffered: this.buffered.ops as DocumentContentJson['ops'],
+    });
   }
 
   getState(): OtClientState {
@@ -341,6 +405,7 @@ export class OtClient {
   private emitState(): void {
     const snapshot = this.getState();
     this.stateListeners.forEach((listener) => listener(snapshot));
+    this.schedulePersist();
   }
 
   private emitContentDelta(delta: Delta): void {

@@ -13,3 +13,8 @@ export interface PaginationQuery {
   limit?: number;
   offset?: number;
 }
+
+export enum OrderDirection {
+  ASC = 'ASC',
+  DESC = 'DESC',
+}
