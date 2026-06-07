@@ -35,6 +35,17 @@ interface DocumentEditorProps {
   className?: string;
 }
 
+const EDITOR_PLACEHOLDER = 'Start typing…';
+
+const EDITOR_TOOLBAR = [
+  [{ header: [1, 2, 3, false] }],
+  ['bold', 'italic', 'underline', 'strike'],
+  [{ list: 'ordered' }, { list: 'bullet' }],
+  ['blockquote', 'code-block'],
+  ['link'],
+  ['clean'],
+];
+
 let cursorsRegistered = false;
 
 function registerCursorsModule(): void {
@@ -95,21 +106,17 @@ export function DocumentEditor({
     const quill = new Quill(editorHost, {
       theme: 'snow',
       readOnly: initialReadOnly,
-      placeholder: initialReadOnly ? '' : 'Start typing…',
+      placeholder: initialReadOnly ? '' : EDITOR_PLACEHOLDER,
       modules: {
         cursors: { positionFlag: positionCursorFlag },
-        toolbar: initialReadOnly
-          ? false
-          : [
-              [{ header: [1, 2, 3, false] }],
-              ['bold', 'italic', 'underline', 'strike'],
-              [{ list: 'ordered' }, { list: 'bullet' }],
-              ['blockquote', 'code-block'],
-              ['link'],
-              ['clean'],
-            ],
+        toolbar: EDITOR_TOOLBAR,
       },
     });
+
+    const toolbarElement = container.querySelector<HTMLElement>('.ql-toolbar');
+    if (toolbarElement) {
+      toolbarElement.style.display = initialReadOnly ? 'none' : '';
+    }
 
     const cursors = quill.getModule('cursors') as QuillCursors;
 
@@ -327,6 +334,11 @@ export function DocumentEditor({
       return;
     }
     quill.enable(!isReadOnly);
+    quill.root.dataset.placeholder = isReadOnly ? '' : EDITOR_PLACEHOLDER;
+    const toolbarElement = containerRef.current?.querySelector<HTMLElement>('.ql-toolbar');
+    if (toolbarElement) {
+      toolbarElement.style.display = isReadOnly ? 'none' : '';
+    }
   }, [isReadOnly]);
 
   React.useEffect(() => {

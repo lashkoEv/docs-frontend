@@ -24,6 +24,10 @@ export const otBackoff = {
 
 export const OT_PERSIST_DEBOUNCE_MS = 500;
 
+export const PENDING_STORAGE_PREFIX = 'doc-pending-';
+
+export const PENDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 export const RATE_LIMITED_RE = /rate.?limit/i;
 
 export const PRESENCE_CURSOR_THROTTLE_MS = 150;

@@ -2,7 +2,7 @@ import Delta from 'quill-delta';
 
 import type { DocumentContentJson } from '@/lib/documents';
 
-import { clearPending, loadPending, savePending } from './pending-storage';
+import { clearPending, loadPending, prunePending, savePending } from './pending-storage';
 import { OT_PERSIST_DEBOUNCE_MS, otBackoff, RATE_LIMITED_RE } from './realtime.constants';
 import type {
   DocumentOperationBroadcast,
@@ -32,6 +32,7 @@ export class OtClient {
   private suspended: boolean = false;
   private sending: boolean = false;
   private resyncing: boolean = false;
+  private catchupQueued: boolean = false;
   private pendingRemote: DocumentOperationBroadcast[] = [];
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -64,6 +65,7 @@ export class OtClient {
   }
 
   recoverPending(): OtRecoveryResult {
+    prunePending();
     const persisted = loadPending(this.options.documentId, this.options.userId);
     if (!persisted) {
       return { recovered: false, droppedStale: false };
@@ -210,6 +212,11 @@ export class OtClient {
   }
 
   async catchup(): Promise<void> {
+    if (this.sending) {
+      this.catchupQueued = true;
+      return;
+    }
+
     this.status = 'syncing';
     this.resyncing = true;
     this.emitState();
@@ -417,6 +424,10 @@ export class OtClient {
       }
     } finally {
       this.sending = false;
+      if (this.catchupQueued && !this.destroyed && !this.suspended) {
+        this.catchupQueued = false;
+        void this.catchup();
+      }
     }
   }
 
