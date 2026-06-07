@@ -32,6 +32,12 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface ResetPasswordPayload {
+  token: string;
+  password: string;
+  confirmPassword: string;
+}
+
 export interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;

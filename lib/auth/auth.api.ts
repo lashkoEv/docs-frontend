@@ -1,6 +1,6 @@
 import { apiClient } from '@/lib/api/client';
 
-import { LoginPayload, RegisterPayload, AuthUser, UserSession } from './auth.types';
+import { LoginPayload, RegisterPayload, ResetPasswordPayload, AuthUser, UserSession } from './auth.types';
 
 export const authApi = {
   register: (payload: RegisterPayload): Promise<UserSession> =>
@@ -12,4 +12,10 @@ export const authApi = {
   logout: (): Promise<void> => apiClient.delete<void>('/auth/logout'),
 
   me: (): Promise<AuthUser> => apiClient.get<AuthUser>('/users/me'),
+
+  forgotPassword: (email: string): Promise<void> =>
+    apiClient.post<void>('/auth/forgot-password', { email }, { skipAuth: true }),
+
+  resetPassword: (payload: ResetPasswordPayload): Promise<void> =>
+    apiClient.post<void>('/auth/reset-password', payload, { skipAuth: true }),
 };

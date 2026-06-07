@@ -6,13 +6,20 @@ export const APP_ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   REGISTER: '/register',
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
   DOCUMENTS: '/documents',
   PROFILE: '/profile',
 } as const;
 
 export const PROTECTED_ROUTE_PREFIXES = ['/documents', '/profile'] as const;
 
-export const AUTH_ROUTES = [APP_ROUTES.LOGIN, APP_ROUTES.REGISTER] as const;
+export const AUTH_ROUTES = [
+  APP_ROUTES.LOGIN,
+  APP_ROUTES.REGISTER,
+  APP_ROUTES.FORGOT_PASSWORD,
+  APP_ROUTES.RESET_PASSWORD,
+] as const;
 
 export const LANDING_FEATURES = [
   {
