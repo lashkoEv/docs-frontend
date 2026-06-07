@@ -29,6 +29,7 @@ import {
 } from '@/lib/documents';
 import { useDocumentRoom, usePresence } from '@/lib/realtime';
 import { APP_ROUTES } from '@/lib/shared';
+import { cn } from '@/lib/utils';
 
 export default function DocumentDetailPage(): React.JSX.Element {
   const params = useParams<{ id: string }>();
@@ -99,6 +100,7 @@ export default function DocumentDetailPage(): React.JSX.Element {
   }
 
   const effectiveRole = realtime.myRole ?? document.myRole;
+  const accessLost = Boolean(realtime.joinError);
   const canDelete = document.myRole === DocumentRole.OWNER;
   const canRestore =
     effectiveRole === DocumentRole.OWNER || effectiveRole === DocumentRole.EDITOR;
@@ -128,50 +130,61 @@ export default function DocumentDetailPage(): React.JSX.Element {
           <DocumentTitleEditor document={document} />
           <div className="flex flex-wrap items-center gap-2">
             <DocumentRoleBadge role={document.myRole} />
-            <RealtimeIndicator
-              status={realtime.status}
-              errorMessage={realtime.errorMessage}
-            />
-            <PresenceRoster participants={participants} />
+            {!accessLost ? (
+              <>
+                <RealtimeIndicator
+                  status={realtime.status}
+                  errorMessage={realtime.errorMessage}
+                />
+                <PresenceRoster participants={participants} />
+              </>
+            ) : null}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setHistoryOpen(true)}
-          >
-            <History className="size-4" />
-            History
-          </Button>
-          {canDelete ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Document actions"
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <MoreHorizontal className="size-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-20">
-                <DropdownMenuItem
-                  onClick={() => setDeleteOpen(true)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="size-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-        </div>
+        {!accessLost ? (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setHistoryOpen(true)}
+            >
+              <History className="size-4" />
+              History
+            </Button>
+            {canDelete ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Document actions"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <MoreHorizontal className="size-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-20">
+                  <DropdownMenuItem
+                    onClick={() => setDeleteOpen(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
-      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        {realtime.joinError ? (
+      <div
+        className={cn(
+          'grid min-w-0 grid-cols-1 gap-6',
+          !accessLost && 'lg:grid-cols-[minmax(0,1fr)_320px]',
+        )}
+      >
+        {accessLost ? (
           <section className="border-border bg-card flex min-h-[400px] flex-col items-center justify-center gap-3 rounded-xl border p-12 text-center">
             <p className="text-foreground text-sm font-medium">
               {realtime.joinError}
@@ -184,17 +197,18 @@ export default function DocumentDetailPage(): React.JSX.Element {
             </Button>
           </section>
         ) : (
-          <DocumentEditor
-            documentId={documentId}
-            myRole={realtime.myRole ?? document.myRole}
-            snapshot={realtime.snapshot}
-            participants={participants}
-          />
+          <>
+            <DocumentEditor
+              documentId={documentId}
+              myRole={realtime.myRole ?? document.myRole}
+              snapshot={realtime.snapshot}
+              participants={participants}
+            />
+            <aside className="lg:sticky lg:top-20 lg:self-start">
+              <DocumentMembersSection document={document} />
+            </aside>
+          </>
         )}
-
-        <aside className="lg:sticky lg:top-20 lg:self-start">
-          <DocumentMembersSection document={document} />
-        </aside>
       </div>
 
       <DeleteDocumentDialog
