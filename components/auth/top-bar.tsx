@@ -1,6 +1,7 @@
 'use client';
 
-import { ChevronDown, LogOut } from 'lucide-react';
+import { ChevronDown, LogOut, UserRound } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { toast } from 'sonner';
@@ -17,9 +18,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { isApiError } from '@/lib/api/errors';
 import { authApi, useAuthStore } from '@/lib/auth';
-import { APP_ROUTES, getInitials } from '@/lib/shared';
+import { APP_ROUTES } from '@/lib/shared';
 
 export function TopBar(): React.JSX.Element {
   const router = useRouter();
@@ -56,9 +58,7 @@ export function TopBar(): React.JSX.Element {
                 className="h-9 gap-2 px-2"
                 disabled={isLoggingOut}
               >
-                <span className="bg-primary/10 text-primary inline-flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-                  {getInitials(user.displayName)}
-                </span>
+                <UserAvatar displayName={user.displayName} avatar={user.avatar} />
                 <span className="text-foreground hidden text-sm font-medium sm:inline">
                   {user.displayName}
                 </span>
@@ -75,6 +75,12 @@ export function TopBar(): React.JSX.Element {
                 </span>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href={APP_ROUTES.PROFILE}>
+                  <UserRound className="size-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={handleLogout}
                 disabled={isLoggingOut}

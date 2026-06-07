@@ -11,12 +11,14 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isApiError } from '@/lib/api/errors';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   type Document,
   type DocumentVersion,
   documentsApi,
 } from '@/lib/documents';
-import { formatShortDate, getInitials } from '@/lib/shared';
+import { formatShortDate } from '@/lib/shared';
+import type { User } from '@/lib/users';
 import { cn } from '@/lib/utils';
 
 interface VersionHistoryPanelProps {
@@ -33,7 +35,7 @@ const REMOVED_HIGHLIGHT = 'rgba(239, 68, 68, 0.22)';
 interface VersionRow {
   key: string;
   revision: number;
-  authorName: string | null;
+  author: User | null;
   createdAt: string;
   isCurrent: boolean;
 }
@@ -195,7 +197,7 @@ export function VersionHistoryPanel({
     const snapshotRows: VersionRow[] = versions.map((version) => ({
       key: `snap-${version.revision}`,
       revision: version.revision,
-      authorName: version.author?.displayName ?? null,
+      author: version.author,
       createdAt: version.createdAt,
       isCurrent: false,
     }));
@@ -206,7 +208,7 @@ export function VersionHistoryPanel({
         {
           key: 'current',
           revision: current.revision,
-          authorName: null,
+          author: null,
           createdAt: current.updatedAt,
           isCurrent: true,
         },
@@ -335,14 +337,18 @@ export function VersionHistoryPanel({
                         preview?.key === row.key && 'bg-muted/60',
                       )}
                     >
-                      <span className="bg-primary/10 text-primary inline-flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-                        {row.authorName ? getInitials(row.authorName) : '—'}
-                      </span>
+                      {row.author ? (
+                        <UserAvatar displayName={row.author.displayName} avatar={row.author.avatar} />
+                      ) : (
+                        <span className="bg-primary/10 text-primary inline-flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                          —
+                        </span>
+                      )}
                       <div className="flex flex-1 flex-col overflow-hidden">
                         <span className="truncate text-sm font-medium">
                           {row.isCurrent
                             ? 'Current version'
-                            : (row.authorName ?? 'Unknown')}
+                            : (row.author?.displayName ?? 'Unknown')}
                         </span>
                         <span className="text-muted-foreground text-xs">
                           Revision {row.revision} · {formatShortDate(row.createdAt)}

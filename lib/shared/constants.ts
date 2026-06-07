@@ -7,9 +7,10 @@ export const APP_ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   DOCUMENTS: '/documents',
+  PROFILE: '/profile',
 } as const;
 
-export const PROTECTED_ROUTE_PREFIXES = ['/documents'] as const;
+export const PROTECTED_ROUTE_PREFIXES = ['/documents', '/profile'] as const;
 
 export const AUTH_ROUTES = [APP_ROUTES.LOGIN, APP_ROUTES.REGISTER] as const;
 

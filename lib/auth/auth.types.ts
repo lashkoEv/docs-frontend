@@ -1,7 +1,10 @@
+import type { FileInfo } from '@/lib/files';
+
 export interface AuthUser {
   id: number;
   email: string;
   displayName: string;
+  avatar: FileInfo | null;
   createdAt: string;
   updatedAt: string;
 }

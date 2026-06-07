@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { isApiError } from '@/lib/api/errors';
 import {
   ASSIGNABLE_DOCUMENT_ROLES,
@@ -31,7 +32,7 @@ import {
   INVITATION_SUGGESTIONS_LIMIT,
   type InviteChipItem,
 } from '@/lib/invitations';
-import { EMAIL_RE, getInitials } from '@/lib/shared';
+import { EMAIL_RE } from '@/lib/shared';
 import { type User, usersApi } from '@/lib/users';
 import { cn } from '@/lib/utils';
 
@@ -321,9 +322,7 @@ export function ShareDialog({
                       disabled={isSubmitting}
                       className="hover:bg-muted/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
                     >
-                      <span className="bg-primary/10 text-primary inline-flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-                        {getInitials(user.displayName)}
-                      </span>
+                      <UserAvatar displayName={user.displayName} avatar={user.avatar} />
                       <div className="flex flex-1 flex-col overflow-hidden">
                         <span className="truncate text-sm font-medium">
                           {user.displayName}

@@ -13,12 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   type AssignableDocumentRole,
   type DocumentMember,
   DocumentRole,
 } from '@/lib/documents';
-import { getInitials } from '@/lib/shared';
 
 interface DocumentMemberItemProps {
   member: DocumentMember;
@@ -43,9 +43,7 @@ export function DocumentMemberItem({
 
   return (
     <li className="flex items-center gap-3 px-4 py-3">
-      <span className="bg-primary/10 text-primary inline-flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-        {getInitials(member.user.displayName)}
-      </span>
+      <UserAvatar displayName={member.user.displayName} avatar={member.user.avatar} size="md" />
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <span className="truncate text-sm font-medium">
