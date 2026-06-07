@@ -194,6 +194,10 @@ export class OtClient {
       this.pendingRemote.push(broadcast);
       return;
     }
+    if (broadcast.revision > this.revision + 1) {
+      void this.catchup();
+      return;
+    }
     const remote = new Delta(broadcast.delta.ops);
     this.applyRemote(remote, broadcast.revision);
   }
