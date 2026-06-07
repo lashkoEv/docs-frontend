@@ -13,6 +13,7 @@ import { useAuthStore } from '@/lib/auth';
 import { DOCUMENT_VIEWER_NOTICE, DocumentRole } from '@/lib/documents';
 import {
   OtClient,
+  positionCursorFlag,
   PRESENCE_CURSOR_IDLE_MS,
   PRESENCE_CURSOR_THROTTLE_MS,
   realtimeClient,
@@ -96,7 +97,7 @@ export function DocumentEditor({
       readOnly: initialReadOnly,
       placeholder: initialReadOnly ? '' : 'Start typing…',
       modules: {
-        cursors: true,
+        cursors: { positionFlag: positionCursorFlag },
         toolbar: initialReadOnly
           ? false
           : [
