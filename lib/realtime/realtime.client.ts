@@ -15,7 +15,9 @@ import type {
   DocumentListChangedEvent,
   DocumentOperationAck,
   DocumentOperationBroadcast,
+  DocumentDeletedEvent,
   DocumentOperationPayload,
+  DocumentResyncEvent,
   DocumentRoleChangedEvent,
   PresenceCursorEvent,
   PresenceJoinedEvent,
@@ -27,10 +29,13 @@ import type {
 let socket: Socket | null = null;
 let isRecoveringAuth = false;
 let hasEstablishedConnection = false;
+let consumers = 0;
 
 const AUTH_ERROR_RE = /auth|token|jwt|unauthorized|expired/i;
 
 type RemoteOperationHandler = (event: DocumentOperationBroadcast) => void;
+type ResyncHandler = (event: DocumentResyncEvent) => void;
+type DeletedHandler = (event: DocumentDeletedEvent) => void;
 type RoleChangedHandler = (event: DocumentRoleChangedEvent) => void;
 type ListChangedHandler = (event: DocumentListChangedEvent) => void;
 type PresenceStateHandler = (event: PresenceStateEvent) => void;
@@ -41,6 +46,8 @@ type NotificationNewHandler = (notification: Notification) => void;
 type ConnectionHandler = () => void;
 
 const remoteOperationHandlers = new Set<RemoteOperationHandler>();
+const resyncHandlers = new Set<ResyncHandler>();
+const deletedHandlers = new Set<DeletedHandler>();
 const roleChangedHandlers = new Set<RoleChangedHandler>();
 const listChangedHandlers = new Set<ListChangedHandler>();
 const presenceStateHandlers = new Set<PresenceStateHandler>();
@@ -169,6 +176,14 @@ const ensureSocket = (): Socket => {
     },
   );
 
+  socket.on(realtimeEvents.DOCUMENT_RESYNC, (event: DocumentResyncEvent) => {
+    resyncHandlers.forEach((handler) => handler(event));
+  });
+
+  socket.on(realtimeEvents.DOCUMENT_DELETED, (event: DocumentDeletedEvent) => {
+    deletedHandlers.forEach((handler) => handler(event));
+  });
+
   socket.on(
     realtimeEvents.DOCUMENT_ROLE_CHANGED,
     (event: DocumentRoleChangedEvent) => {
@@ -216,7 +231,22 @@ export const realtimeClient = {
     }
   },
 
+  acquire(): void {
+    consumers += 1;
+    realtimeClient.connect();
+  },
+
+  release(): void {
+    if (consumers > 0) {
+      consumers -= 1;
+    }
+    if (consumers === 0) {
+      realtimeClient.disconnect();
+    }
+  },
+
   disconnect(): void {
+    consumers = 0;
     if (socket && socket.connected) {
       socket.disconnect();
     }
@@ -274,6 +304,20 @@ export const realtimeClient = {
     remoteOperationHandlers.add(handler);
     return () => {
       remoteOperationHandlers.delete(handler);
+    };
+  },
+
+  onDocumentResync(handler: ResyncHandler): () => void {
+    resyncHandlers.add(handler);
+    return () => {
+      resyncHandlers.delete(handler);
+    };
+  },
+
+  onDocumentDeleted(handler: DeletedHandler): () => void {
+    deletedHandlers.add(handler);
+    return () => {
+      deletedHandlers.delete(handler);
     };
   },
 

@@ -103,9 +103,7 @@ export const useDocumentDetailStore = create<DocumentDetailState>()((set, get) =
         offset: 0,
       });
       set({ pendingInvitations: pending.items });
-    } catch {
-      // TODO: for now ignore, non-critical
-    }
+    } catch {}
   },
 
   setDocument: (document) => set({ document }),

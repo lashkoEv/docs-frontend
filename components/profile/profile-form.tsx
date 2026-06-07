@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import { useAuthStore } from '@/lib/auth';
 import { ProfileInput, profileSchema, usersApi } from '@/lib/users';
 
@@ -41,11 +41,7 @@ export function ProfileForm(): React.JSX.Element | null {
       form.reset({ displayName: updated.displayName });
       toast.success('Profile updated');
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to update the profile. Please try again.');
-      }
+      toastApiError(error, 'Unable to update the profile. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

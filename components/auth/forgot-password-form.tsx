@@ -5,7 +5,6 @@ import { MailCheck } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +16,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import { authApi, ForgotPasswordInput, forgotPasswordSchema } from '@/lib/auth';
 import { APP_ROUTES } from '@/lib/shared';
 
@@ -36,11 +35,7 @@ export function ForgotPasswordForm(): React.JSX.Element {
       await authApi.forgotPassword(values.email);
       setSentTo(values.email);
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Something went wrong. Please try again.');
-      }
+      toastApiError(error, 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

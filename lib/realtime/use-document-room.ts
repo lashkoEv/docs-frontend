@@ -30,6 +30,13 @@ export function useDocumentRoom(documentId: number | null): UseDocumentRoomResul
   const [joinError, setJoinError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    realtimeClient.acquire();
+    return () => {
+      realtimeClient.release();
+    };
+  }, []);
+
+  React.useEffect(() => {
     if (documentId === null) {
       return;
     }
@@ -68,7 +75,7 @@ export function useDocumentRoom(documentId: number | null): UseDocumentRoomResul
       return;
     }
 
-    const unsubscribe = realtimeClient.onRoleChanged(
+    const unsubscribeRole = realtimeClient.onRoleChanged(
       (event: DocumentRoleChangedEvent) => {
         if (event.documentId !== documentId) {
           return;
@@ -79,7 +86,19 @@ export function useDocumentRoom(documentId: number | null): UseDocumentRoomResul
         }
       },
     );
-    return unsubscribe;
+
+    const unsubscribeDeleted = realtimeClient.onDocumentDeleted((event) => {
+      if (event.documentId !== documentId) {
+        return;
+      }
+      setSnapshot(null);
+      setJoinError('This document was deleted');
+    });
+
+    return () => {
+      unsubscribeRole();
+      unsubscribeDeleted();
+    };
   }, [documentId]);
 
   return { status, errorMessage, myRole, snapshot, isJoining, joinError };

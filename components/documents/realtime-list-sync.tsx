@@ -9,14 +9,14 @@ export function RealtimeListSync(): null {
   const applyAccessChange = useDocumentsStore((state) => state.applyAccessChange);
 
   React.useEffect(() => {
-    realtimeClient.connect();
+    realtimeClient.acquire();
     const unsubscribe = realtimeClient.onDocumentListChanged((event) => {
       void applyAccessChange(event);
     });
 
     return () => {
       unsubscribe();
-      realtimeClient.disconnect();
+      realtimeClient.release();
     };
   }, [applyAccessChange]);
 

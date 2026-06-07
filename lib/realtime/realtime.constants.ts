@@ -6,6 +6,8 @@ export const realtimeEvents = {
   DOCUMENT_LEAVE: 'document:leave',
   DOCUMENT_OPERATION: 'document:operation',
   DOCUMENT_CATCHUP: 'document:catchup',
+  DOCUMENT_RESYNC: 'document:resync',
+  DOCUMENT_DELETED: 'document:deleted',
   DOCUMENT_ROLE_CHANGED: 'document:role-changed',
   DOCUMENT_LIST_CHANGED: 'document:list-changed',
   PRESENCE_STATE: 'presence:state',

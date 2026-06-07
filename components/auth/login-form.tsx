@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
-import { isApiError } from '@/lib/api/errors';
+import { isApiError, toastApiError } from '@/lib/api/errors';
 import { authApi, LoginInput, loginSchema, useAuthStore } from '@/lib/auth';
 import { invitationsApi } from '@/lib/invitations';
 import { APP_ROUTES } from '@/lib/shared';
@@ -68,11 +68,7 @@ export function LoginForm({
 
       router.replace(APP_ROUTES.DOCUMENTS);
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to log in. Please try again.');
-      }
+      toastApiError(error, 'Unable to log in. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

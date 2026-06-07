@@ -21,6 +21,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { isApiError } from '@/lib/api/errors';
 import { authApi, useAuthStore } from '@/lib/auth';
+import { realtimeClient } from '@/lib/realtime';
 import { APP_ROUTES } from '@/lib/shared';
 
 export function TopBar(): React.JSX.Element {
@@ -38,6 +39,7 @@ export function TopBar(): React.JSX.Element {
         toast.error(error.message);
       }
     } finally {
+      realtimeClient.disconnect();
       clear();
       router.replace(APP_ROUTES.LOGIN);
     }

@@ -24,7 +24,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import {
   CreateDocumentInput,
   createDocumentSchema,
@@ -64,11 +64,7 @@ export function CreateDocumentDialog({
       await refresh();
       router.push(`${APP_ROUTES.DOCUMENTS}/${document.id}`);
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to create document. Please try again.');
-      }
+      toastApiError(error, 'Unable to create document. Please try again.');
     }
   };
 

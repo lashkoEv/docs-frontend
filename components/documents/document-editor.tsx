@@ -193,6 +193,13 @@ export function DocumentEditor({
       otClient.onRemote(event);
     });
 
+    const unsubscribeResyncRequired = realtimeClient.onDocumentResync((event) => {
+      if (event.documentId !== documentId) {
+        return;
+      }
+      otClient.applyServerResync({ revision: event.revision, content: event.content });
+    });
+
     const unsubscribeConnectionLost = realtimeClient.onConnectionLost(() => {
       otClient.suspend();
     });
@@ -297,6 +304,7 @@ export function DocumentEditor({
       unsubscribeContentSet();
       unsubscribeResync();
       unsubscribeRemote();
+      unsubscribeResyncRequired();
       unsubscribeConnectionLost();
       unsubscribeReconnected();
       unsubscribeCursor();

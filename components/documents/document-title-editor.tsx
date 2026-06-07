@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import {
   type Document,
   DOCUMENT_TITLE_MAX_LENGTH,
@@ -62,11 +62,7 @@ export function DocumentTitleEditor({ document }: DocumentTitleEditorProps): Rea
       setEditing(false);
       toast.success('Title updated');
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to update title.');
-      }
+      toastApiError(error, 'Unable to update title.');
     } finally {
       setIsSaving(false);
     }

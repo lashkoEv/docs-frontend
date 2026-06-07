@@ -87,6 +87,16 @@ export type DocumentCatchupAck =
     }
   | { ok: false; error: string };
 
+export interface DocumentResyncEvent {
+  documentId: number;
+  revision: number;
+  content: DocumentContentJson;
+}
+
+export interface DocumentDeletedEvent {
+  documentId: number;
+}
+
 export interface DocumentRoleChangedEvent {
   documentId: number;
   userId: number;

@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import {
   ASSIGNABLE_DOCUMENT_ROLES,
   type AssignableDocumentRole,
@@ -221,11 +221,7 @@ export function ShareDialog({
         onOpenChange(false);
       }
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to send invitations.');
-      }
+      toastApiError(error, 'Unable to send invitations.');
     } finally {
       setIsSubmitting(false);
     }

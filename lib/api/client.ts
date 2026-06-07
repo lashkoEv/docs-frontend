@@ -92,7 +92,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   const bodyText = await response.text();
-  const body = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+  let body: unknown = null;
+  if (bodyText) {
+    try {
+      body = JSON.parse(bodyText);
+    } catch {
+      body = null;
+    }
+  }
 
   if (!response.ok) {
     throw new ApiError(

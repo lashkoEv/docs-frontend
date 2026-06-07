@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import { useAuthStore } from '@/lib/auth';
 import {
   type AssignableDocumentRole,
@@ -74,11 +74,7 @@ export function DocumentMembersSection({
       setMemberToRemove(null);
       await reloadMembers();
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to remove member.');
-      }
+      toastApiError(error, 'Unable to remove member.');
     } finally {
       setIsRemoving(false);
     }
@@ -97,11 +93,7 @@ export function DocumentMembersSection({
       );
       await reloadMembers();
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to update role.');
-      }
+      toastApiError(error, 'Unable to update role.');
     } finally {
       setUpdatingRoleUserId(null);
     }
@@ -116,11 +108,7 @@ export function DocumentMembersSection({
       setInvitationToRevoke(null);
       await reloadPendingInvitations();
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to revoke invitation');
-      }
+      toastApiError(error, 'Unable to revoke invitation');
     } finally {
       setIsRevoking(false);
     }

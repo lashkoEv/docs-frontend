@@ -31,6 +31,8 @@ export class OtClient {
   private destroyed: boolean = false;
   private suspended: boolean = false;
   private sending: boolean = false;
+  private resyncing: boolean = false;
+  private pendingRemote: DocumentOperationBroadcast[] = [];
   private persistTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly stateListeners = new Set<OtListener>();
@@ -188,42 +190,83 @@ export class OtClient {
   }
 
   onRemote(broadcast: DocumentOperationBroadcast): void {
+    if (this.resyncing) {
+      this.pendingRemote.push(broadcast);
+      return;
+    }
     const remote = new Delta(broadcast.delta.ops);
     this.applyRemote(remote, broadcast.revision);
   }
 
-  async catchup(): Promise<void> {
-    this.status = 'syncing';
-    this.emitState();
-    const result = await this.options.requestCatchup(this.revision);
+  applyServerResync(snapshot: DocumentSnapshot): void {
     if (this.destroyed) {
       return;
     }
-    if (!result.ok) {
-      this.status = 'error';
-      this.errorMessage = result.error ?? 'Catchup failed';
-      this.emitState();
-      return;
-    }
+    this.resetToSnapshot(snapshot);
+  }
 
-    if (result.action === 'full-resync') {
-      this.resetToSnapshot({
-        revision: result.currentRevision,
-        content: result.content,
-      });
-      return;
-    }
-
-    result.ops.forEach((op) => {
-      if (op.revision <= this.revision) {
-        return;
-      }
-      this.applyRemote(new Delta(op.delta.ops), op.revision);
-    });
-    this.revision = Math.max(this.revision, result.currentRevision);
-    this.status = this.inFlight ? 'sending' : 'idle';
-    this.errorMessage = null;
+  async catchup(): Promise<void> {
+    this.status = 'syncing';
+    this.resyncing = true;
     this.emitState();
+
+    try {
+      let caughtUp = false;
+      while (!caughtUp) {
+        const result = await this.options.requestCatchup(this.revision);
+        if (this.destroyed) {
+          return;
+        }
+        if (!result.ok) {
+          this.status = 'error';
+          this.errorMessage = result.error ?? 'Catchup failed';
+          this.emitState();
+          return;
+        }
+
+        if (result.action === 'full-resync') {
+          this.resetToSnapshot({
+            revision: result.currentRevision,
+            content: result.content,
+          });
+          return;
+        }
+
+        const revisionBefore = this.revision;
+        result.ops.forEach((op) => {
+          if (op.revision <= this.revision) {
+            return;
+          }
+          this.applyRemote(new Delta(op.delta.ops), op.revision);
+        });
+
+        if (this.revision >= result.currentRevision) {
+          caughtUp = true;
+        } else if (this.revision === revisionBefore) {
+          this.revision = result.currentRevision;
+          caughtUp = true;
+        }
+      }
+
+      this.status = this.inFlight ? 'sending' : 'idle';
+      this.errorMessage = null;
+      this.emitState();
+    } finally {
+      this.resyncing = false;
+      if (!this.destroyed && this.status !== 'error') {
+        this.drainPendingRemote();
+      } else {
+        this.pendingRemote = [];
+      }
+    }
+  }
+
+  private drainPendingRemote(): void {
+    const buffered = this.pendingRemote;
+    this.pendingRemote = [];
+    buffered.forEach((broadcast) => {
+      this.applyRemote(new Delta(broadcast.delta.ops), broadcast.revision);
+    });
   }
 
   private resetToSnapshot(snapshot: DocumentSnapshot): void {

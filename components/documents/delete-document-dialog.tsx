@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import { documentsApi, type DocumentSummary } from '@/lib/documents';
 
 interface DeleteDocumentDialogProps {
@@ -37,11 +37,7 @@ export function DeleteDocumentDialog({
       onDeleted();
       onOpenChange(false);
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to delete document.');
-      }
+      toastApiError(error, 'Unable to delete document.');
     } finally {
       setIsDeleting(false);
     }

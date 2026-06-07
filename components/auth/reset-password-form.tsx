@@ -17,7 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { PasswordInput } from '@/components/ui/password-input';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import { authApi, ResetPasswordInput, resetPasswordSchema } from '@/lib/auth';
 import { APP_ROUTES } from '@/lib/shared';
 
@@ -45,11 +45,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps): React.JSX.
       toast.success('Password updated. Sign in with your new password.');
       router.replace(APP_ROUTES.LOGIN);
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Something went wrong. Please try again.');
-      }
+      toastApiError(error, 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

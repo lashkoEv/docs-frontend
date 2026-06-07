@@ -1,7 +1,21 @@
 import type { PersistedPending } from './realtime.types';
 
+const TAB_ID_KEY = 'docs-tab-id';
+
+const tabId = (): string => {
+  if (typeof window === 'undefined' || typeof window.sessionStorage === 'undefined') {
+    return 'server';
+  }
+  let id = window.sessionStorage.getItem(TAB_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    window.sessionStorage.setItem(TAB_ID_KEY, id);
+  }
+  return id;
+};
+
 const storageKey = (documentId: number, userId: number): string =>
-  `doc-pending-${documentId}-${userId}`;
+  `doc-pending-${documentId}-${userId}-${tabId()}`;
 
 const isAvailable = (): boolean =>
   typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';

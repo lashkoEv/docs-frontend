@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import { useAuthStore } from '@/lib/auth';
 import {
   ALLOWED_AVATAR_MIME_TYPES,
@@ -55,11 +55,7 @@ export function AvatarSection(): React.JSX.Element | null {
       setUser(updated);
       toast.success('Photo updated');
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to upload the photo. Please try again.');
-      }
+      toastApiError(error, 'Unable to upload the photo. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -72,11 +68,7 @@ export function AvatarSection(): React.JSX.Element | null {
       setUser(updated);
       toast.success('Photo removed');
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to remove the photo. Please try again.');
-      }
+      toastApiError(error, 'Unable to remove the photo. Please try again.');
     } finally {
       setIsRemoving(false);
     }

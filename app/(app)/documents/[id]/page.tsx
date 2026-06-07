@@ -106,9 +106,7 @@ export default function DocumentDetailPage(): React.JSX.Element {
   const handleDeleted = async (): Promise<void> => {
     try {
       await documentsApi.getCounters();
-    } catch {
-      // counters will be re-fetched when list page mounts
-    }
+    } catch {}
     toast.message('Document removed', {
       description: `"${document.title}" has been deleted.`,
     });

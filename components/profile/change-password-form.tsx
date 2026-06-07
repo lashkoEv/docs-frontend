@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { PasswordInput } from '@/components/ui/password-input';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import { ChangePasswordInput, changePasswordSchema, usersApi } from '@/lib/users';
 
 export function ChangePasswordForm(): React.JSX.Element {
@@ -36,11 +36,7 @@ export function ChangePasswordForm(): React.JSX.Element {
       form.reset();
       toast.success('Password changed');
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to change the password. Please try again.');
-      }
+      toastApiError(error, 'Unable to change the password. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

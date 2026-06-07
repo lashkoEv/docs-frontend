@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 import { StatusPageShell } from '@/components/layout/status-page-shell';
 import { Button } from '@/components/ui/button';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import { authApi, useAuthStore } from '@/lib/auth';
 import { DOCUMENT_ROLE_LABELS } from '@/lib/documents';
 import { invitationsApi, type InvitationPreview } from '@/lib/invitations';
@@ -49,11 +49,7 @@ export function InvitationLanding({
       toast.success('Invitation accepted');
       router.replace(`${APP_ROUTES.DOCUMENTS}/${response.documentId}`);
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to accept invitation.');
-      }
+      toastApiError(error, 'Unable to accept invitation.');
     } finally {
       setIsAccepting(false);
     }

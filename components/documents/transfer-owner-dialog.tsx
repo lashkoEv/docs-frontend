@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { isApiError } from '@/lib/api/errors';
+import { toastApiError } from '@/lib/api/errors';
 import {
   type DocumentMember,
   documentsApi,
@@ -46,11 +46,7 @@ export function TransferOwnerDialog({
       onOpenChange(false);
       await reloadMembers();
     } catch (error) {
-      if (isApiError(error)) {
-        toast.error(error.message);
-      } else {
-        toast.error('Unable to transfer ownership.');
-      }
+      toastApiError(error, 'Unable to transfer ownership.');
     } finally {
       setIsSubmitting(false);
     }
