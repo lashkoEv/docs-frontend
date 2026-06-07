@@ -42,9 +42,7 @@ export const savePending = (
   }
   try {
     window.localStorage.setItem(storageKey(documentId, userId), JSON.stringify(data));
-  } catch {
-    // Quota or serialization failure — pending stays in memory; nothing else to do.
-  }
+  } catch {}
 };
 
 export const clearPending = (documentId: number, userId: number): void => {
@@ -53,7 +51,5 @@ export const clearPending = (documentId: number, userId: number): void => {
   }
   try {
     window.localStorage.removeItem(storageKey(documentId, userId));
-  } catch {
-    // Ignore — best-effort cleanup.
-  }
+  } catch {}
 };

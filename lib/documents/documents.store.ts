@@ -125,9 +125,7 @@ export const useDocumentsStore = create<DocumentsState>()((set, get) => ({
     try {
       const counters = await documentsApi.getCounters();
       set({ counters });
-    } catch {
-      // counters failure is non-fatal — list page still renders
-    }
+    } catch {}
   },
 
   applyAccessChange: async ({ documentId, role }) => {
