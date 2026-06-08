@@ -1,36 +1,94 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Docs Lite — Frontend
 
-## Getting Started
+The web client for Docs Lite. Built with Next.js 16 (App Router) and React 19, it provides authentication, document management with sharing, and a collaborative editor with live cursors, presence, version history, and notifications - all synchronized in real time over WebSocket.
 
-First, run the development server:
+## Technology Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Framework**: Next.js 16 (App Router, Turbopack)
+- **UI**: React 19
+- **Styling**: Tailwind CSS 4 (CSS-first config via `@theme inline`)
+- **Components**: shadcn/ui primitives + Radix UI
+- **Forms**: `react-hook-form` + `zod` (`@hookform/resolvers`)
+- **State**: Zustand with `persist` middleware
+- **Editor**: Quill 2 + `quill-cursors` + `quill-delta` (OT)
+- **Real-time**: `socket.io-client`
+- **Toasts**: sonner
+- **Theming**: `next-themes`
+- **Variants**: `class-variance-authority`, `clsx`, `tailwind-merge`
+- **Icons**: `lucide-react`
+
+## Project Structure
+
+```
+docs-frontend/
+├── app/                        # App Router
+│   ├── (auth)/                 # Public route group: split-screen layout
+│   │   ├── login/  register/  forgot-password/  reset-password/
+│   │   └── layout.tsx
+│   ├── (app)/                  # Protected route group: <ProtectedRoute> + <TopBar>
+│   │   ├── documents/          # List + [id] editor page
+│   │   ├── profile/
+│   │   ├── invitations/        # Accept-by-token flow
+│   │   └── layout.tsx
+│   ├── layout.tsx              # Root layout: fonts, <Toaster />, theme provider
+│   ├── page.tsx                # Landing
+│   ├── error.tsx  not-found.tsx
+│   └── globals.css             # Tailwind 4 @theme inline (oklch tokens, brand gradient)
+├── components/
+│   ├── ui/                     # shadcn primitives (Button, Input, Card, Form, ...)
+│   ├── auth/                   # Login/register/reset forms, ProtectedRoute, TopBar
+│   ├── documents/              # Document list, editor, share dialog, members, version history
+│   ├── realtime/               # Presence roster, cursors, connection indicator
+│   ├── notifications/          # Bell + panel
+│   └── brand/                  # Logo / wordmark
+├── lib/
+│   ├── api/                    # fetch client (Bearer + auto-refresh), per-domain API modules
+│   ├── stores/                 # Zustand stores (auth, ...)
+│   ├── schemas/                # zod schemas (mirror backend validation rules)
+│   ├── hooks/                  # useDocumentRoom and other client hooks
+│   ├── constants/              # Routes and client constants
+│   └── utils.ts                # cn() helper
+├── public/                     # Static assets
+├── .env.example                # Public (NEXT_PUBLIC_*) env template
+├── Dockerfile                  # Multi-stage: deps (dev) / runtime (standalone)
+├── components.json             # shadcn config
+└── package.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Configuration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Only `NEXT_PUBLIC_*` variables are exposed to the browser, and they are inlined into the client bundle at build time. Copy the template:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cp .env.example .env.local
+```
 
-## Learn More
+### Key Environment Variables
+- `NEXT_PUBLIC_API_URL` — backend origin
+- `NEXT_PUBLIC_S3_PUBLIC_URL` — public base URL of the avatars bucket (MinIO locally, S3 in production).
 
-To learn more about Next.js, take a look at the following resources:
+## Installation & Setup
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Prerequisites
+- Node.js 20 or higher
+- A running `docs-backend` API (see its `README.md`)
+- npm
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Installation Steps
 
-## Deploy on Vercel
+```bash
+npm install
+cp .env.example .env.local  
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The app is available at http://localhost:3000.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Available Scripts
+
+```bash
+npm run dev     # next dev (Turbopack, HMR)
+npm run build   # next build (production)
+npm run start   # next start (serve production build)
+npm run lint    # eslint
+```
