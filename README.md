@@ -26,27 +26,34 @@ docs-frontend/
 │   │   ├── login/  register/  forgot-password/  reset-password/
 │   │   └── layout.tsx
 │   ├── (app)/                  # Protected route group: <ProtectedRoute> + <TopBar>
-│   │   ├── documents/          # List + [id] editor page
+│   │   ├── documents/          # List + documents/[id] editor page
 │   │   ├── profile/
-│   │   ├── invitations/        # Accept-by-token flow
 │   │   └── layout.tsx
+│   ├── invite/[token]/         # Public accept-invitation-by-token flow
 │   ├── layout.tsx              # Root layout: fonts, <Toaster />, theme provider
 │   ├── page.tsx                # Landing
 │   ├── error.tsx  not-found.tsx
 │   └── globals.css             # Tailwind 4 @theme inline (oklch tokens, brand gradient)
 ├── components/
 │   ├── ui/                     # shadcn primitives (Button, Input, Card, Form, ...)
-│   ├── auth/                   # Login/register/reset forms, ProtectedRoute, TopBar
-│   ├── documents/              # Document list, editor, share dialog, members, version history
-│   ├── realtime/               # Presence roster, cursors, connection indicator
+│   ├── auth/                   # Login/register/reset forms, ProtectedRoute, GuestRoute, TopBar
+│   ├── documents/              # Document list, editor, share dialog, members, presence, version history
+│   ├── invitations/            # Invitation landing + status page
 │   ├── notifications/          # Bell + panel
+│   ├── profile/                # Profile form, avatar section, change password
+│   ├── layout/                 # Shared layout shells
+│   ├── providers/              # Theme provider
 │   └── brand/                  # Logo / wordmark
-├── lib/
-│   ├── api/                    # fetch client (Bearer + auto-refresh), per-domain API modules
-│   ├── stores/                 # Zustand stores (auth, ...)
-│   ├── schemas/                # zod schemas (mirror backend validation rules)
-│   ├── hooks/                  # useDocumentRoom and other client hooks
-│   ├── constants/              # Routes and client constants
+├── lib/                        # Domain-grouped: each domain bundles its .api / .store / .schema / .types / .constants
+│   ├── api/                    # fetch client (Bearer + auto-refresh) + ApiError
+│   ├── auth/                   # auth store, schema, hooks, api, types
+│   ├── documents/              # documents + document-detail stores, api, schema, types
+│   ├── realtime/               # socket client, OT client, useDocumentRoom, usePresence, store
+│   ├── files/                  # avatar upload api + helpers
+│   ├── invitations/            # invitations api (+ server-side helper)
+│   ├── notifications/          # notifications api + store
+│   ├── users/                  # users api + schema
+│   ├── shared/                 # cross-domain constants, helpers (date/text/pagination), types
 │   └── utils.ts                # cn() helper
 ├── public/                     # Static assets
 ├── .env.example                # Public (NEXT_PUBLIC_*) env template
