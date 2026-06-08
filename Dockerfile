@@ -9,6 +9,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ARG NEXT_PUBLIC_S3_PUBLIC_URL=http://localhost:9000/docs-lite-avatars
+ENV NEXT_PUBLIC_S3_PUBLIC_URL=${NEXT_PUBLIC_S3_PUBLIC_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
