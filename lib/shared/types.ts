@@ -1,3 +1,7 @@
+export interface DataResponse<T> {
+  data: T;
+}
+
 export interface Pagination {
   total: number;
   limit: number;

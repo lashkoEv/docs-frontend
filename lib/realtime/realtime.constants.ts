@@ -22,13 +22,24 @@ export const otBackoff = {
   maxDelayMs: 4000,
 } as const;
 
+export const socketReconnect = {
+  delayMs: 500,
+  delayMaxMs: 5000,
+} as const;
+
+export const REALTIME_ACK_TIMEOUT_MS = 5000;
+
 export const OT_PERSIST_DEBOUNCE_MS = 500;
 
 export const PENDING_STORAGE_PREFIX = 'doc-pending-';
 
+export const TAB_ID_KEY = 'docs-tab-id';
+
 export const PENDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const RATE_LIMITED_RE = /rate.?limit/i;
+
+export const AUTH_ERROR_RE = /auth|token|jwt|unauthorized|expired/i;
 
 export const PRESENCE_CURSOR_THROTTLE_MS = 150;
 

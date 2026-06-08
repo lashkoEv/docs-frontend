@@ -27,10 +27,12 @@ import {
 import {
   CHIP_DELIMITER_RE,
   invitationsApi,
+  INVITATION_MAX_ERROR_TOASTS,
   INVITATION_MAX_RECIPIENTS,
   INVITATION_SEARCH_DEBOUNCE_MS,
   INVITATION_SUGGESTIONS_LIMIT,
   type InviteChipItem,
+  SUGGESTION_BLUR_DELAY_MS,
 } from '@/lib/invitations';
 import { EMAIL_RE } from '@/lib/shared';
 import { type User, usersApi } from '@/lib/users';
@@ -208,7 +210,7 @@ export function ShareDialog({
         toast.warning(summary);
       }
 
-      result.errors.slice(0, 5).forEach((item) => {
+      result.errors.slice(0, INVITATION_MAX_ERROR_TOASTS).forEach((item) => {
         toast.error(`${item.email}: ${item.message}`);
       });
 
@@ -297,7 +299,7 @@ export function ShareDialog({
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => {
-                  setTimeout(() => setIsFocused(false), 150);
+                  setTimeout(() => setIsFocused(false), SUGGESTION_BLUR_DELAY_MS);
                 }}
                 placeholder={chips.length === 0 ? 'someone@example.com' : ''}
                 disabled={isSubmitting || chips.length >= INVITATION_MAX_RECIPIENTS}

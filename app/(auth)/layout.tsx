@@ -1,10 +1,11 @@
-import { Check } from "lucide-react";
-import * as React from "react";
+import { Check } from 'lucide-react';
+import * as React from 'react';
 
-import { GuestRoute } from "@/components/auth/guest-route";
+import { GuestRoute } from '@/components/auth/guest-route';
 import { LogoLink } from '@/components/brand/logo-link';
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { AUTH_PAGE_HIGHLIGHTS } from "@/lib/auth";
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { AUTH_PAGE_HIGHLIGHTS } from '@/lib/auth';
+import { copyrightLine } from '@/lib/shared';
 
 export default function AuthLayout({
   children,
@@ -25,7 +26,7 @@ export default function AuthLayout({
           </div>
 
           <footer className="text-muted-foreground text-xs">
-            © {new Date().getFullYear()} Docs Lite — Yevheniia Lashko
+            {copyrightLine()}
           </footer>
         </section>
 

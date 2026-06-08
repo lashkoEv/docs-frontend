@@ -13,12 +13,13 @@ import {
   AVATAR_FILE_INPUT_ACCEPT,
   FileType,
   MAX_AVATAR_SIZE_BYTES,
+  MAX_AVATAR_SIZE_LABEL,
   uploadFile,
 } from '@/lib/files';
 import { usersApi } from '@/lib/users';
 
 const isAllowedAvatarType = (mimeType: string): boolean =>
-  (ALLOWED_AVATAR_MIME_TYPES as readonly string[]).includes(mimeType);
+  ALLOWED_AVATAR_MIME_TYPES.some((allowed) => allowed === mimeType);
 
 export function AvatarSection(): React.JSX.Element | null {
   const user = useAuthStore((state) => state.user);
@@ -44,7 +45,7 @@ export function AvatarSection(): React.JSX.Element | null {
     }
 
     if (file.size > MAX_AVATAR_SIZE_BYTES) {
-      toast.error('The image is too large. Maximum size is 5 MB.');
+      toast.error(`The image is too large. Maximum size is ${MAX_AVATAR_SIZE_LABEL}.`);
       return;
     }
 
@@ -101,7 +102,7 @@ export function AvatarSection(): React.JSX.Element | null {
             </Button>
           ) : null}
         </div>
-        <p className="text-muted-foreground text-xs">JPG, PNG or WebP, up to 5 MB.</p>
+        <p className="text-muted-foreground text-xs">JPG, PNG or WebP, up to {MAX_AVATAR_SIZE_LABEL}.</p>
       </div>
 
       <input

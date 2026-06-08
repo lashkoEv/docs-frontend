@@ -1,17 +1,11 @@
 import { useAuthStore } from '@/lib/auth';
-import { API_URL } from '@/lib/shared';
+import { API_PREFIX, API_URL, type DataResponse } from '@/lib/shared';
 
 import { ApiError, ApiErrorBody } from './errors';
-
-const API_PREFIX = '/api/v1';
 
 interface RequestOptions extends RequestInit {
   skipAuth?: boolean;
   skipRefresh?: boolean;
-}
-
-interface DataResponse<T> {
-  data: T;
 }
 
 let refreshPromise: Promise<boolean> | null = null;

@@ -1,5 +1,5 @@
 import { apiClient } from '@/lib/api/client';
-import { buildPaginationQuery, type Paginated } from '@/lib/shared';
+import { appendPaginationParams, buildPaginationQuery, type Paginated } from '@/lib/shared';
 
 import type {
   CreateDocumentInput,
@@ -22,12 +22,7 @@ import {
 export const documentsApi = {
   list: (query: GetDocumentsQuery = {}): Promise<Paginated<DocumentSummary>> => {
     const params = new URLSearchParams();
-    if (query.limit !== undefined) {
-      params.set('limit', String(query.limit));
-    }
-    if (query.offset !== undefined) {
-      params.set('offset', String(query.offset));
-    }
+    appendPaginationParams(params, query);
     if (query.filter && query.filter !== DocumentFilter.ALL) {
       params.set('filter', query.filter);
     }

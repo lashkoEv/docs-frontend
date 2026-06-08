@@ -1,7 +1,5 @@
-import { PENDING_STORAGE_PREFIX, PENDING_TTL_MS } from './realtime.constants';
+import { PENDING_STORAGE_PREFIX, PENDING_TTL_MS, TAB_ID_KEY } from './realtime.constants';
 import type { PersistedPending } from './realtime.types';
-
-const TAB_ID_KEY = 'docs-tab-id';
 
 const tabId = (): string => {
   if (typeof window === 'undefined' || typeof window.sessionStorage === 'undefined') {

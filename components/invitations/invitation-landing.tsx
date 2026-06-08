@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { StatusPageShell } from '@/components/layout/status-page-shell';
 import { Button } from '@/components/ui/button';
 import { toastApiError } from '@/lib/api/errors';
-import { authApi, useAuthStore } from '@/lib/auth';
+import { authApi, useAuthHydrated, useAuthStore } from '@/lib/auth';
 import { DOCUMENT_ROLE_LABELS } from '@/lib/documents';
 import { invitationsApi, type InvitationPreview } from '@/lib/invitations';
 import { APP_ROUTES, formatShortDate } from '@/lib/shared';
@@ -27,16 +27,8 @@ export function InvitationLanding({
   const accessToken = useAuthStore((state) => state.accessToken);
   const clear = useAuthStore((state) => state.clear);
 
-  const [hydrated, setHydrated] = React.useState(false);
+  const hydrated = useAuthHydrated();
   const [isAccepting, setIsAccepting] = React.useState(false);
-
-  React.useEffect(() => {
-    if (useAuthStore.persist.hasHydrated()) {
-      setHydrated(true);
-      return;
-    }
-    return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
-  }, []);
 
   const isAuthenticated = Boolean(accessToken && user);
   const matchingEmail =

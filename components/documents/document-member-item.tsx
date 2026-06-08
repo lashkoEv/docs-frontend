@@ -15,8 +15,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import {
+  ASSIGNABLE_DOCUMENT_ROLES,
   type AssignableDocumentRole,
   type DocumentMember,
+  DOCUMENT_ROLE_LABELS,
   DocumentRole,
 } from '@/lib/documents';
 
@@ -72,26 +74,14 @@ export function DocumentMemberItem({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Role</DropdownMenuLabel>
-            <DropdownMenuItem
-              onSelect={() => onChangeRole(member, DocumentRole.EDITOR)}
-            >
-              <span className="inline-flex size-4 items-center justify-center">
-                {member.role === DocumentRole.EDITOR ? (
-                  <Check className="size-4" />
-                ) : null}
-              </span>
-              Editor
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => onChangeRole(member, DocumentRole.VIEWER)}
-            >
-              <span className="inline-flex size-4 items-center justify-center">
-                {member.role === DocumentRole.VIEWER ? (
-                  <Check className="size-4" />
-                ) : null}
-              </span>
-              Viewer
-            </DropdownMenuItem>
+            {ASSIGNABLE_DOCUMENT_ROLES.map((role) => (
+              <DropdownMenuItem key={role} onSelect={() => onChangeRole(member, role)}>
+                <span className="inline-flex size-4 items-center justify-center">
+                  {member.role === role ? <Check className="size-4" /> : null}
+                </span>
+                {DOCUMENT_ROLE_LABELS[role]}
+              </DropdownMenuItem>
+            ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => onRequestTransferOwner(member)}>
               <Crown className="size-4" />

@@ -1,4 +1,6 @@
 export const INVITATION_MAX_RECIPIENTS = 20;
 export const INVITATION_SUGGESTIONS_LIMIT = 6;
 export const INVITATION_SEARCH_DEBOUNCE_MS = 250;
+export const INVITATION_MAX_ERROR_TOASTS = 5;
+export const SUGGESTION_BLUR_DELAY_MS = 150;
 export const CHIP_DELIMITER_RE = /[\s,;]+/;

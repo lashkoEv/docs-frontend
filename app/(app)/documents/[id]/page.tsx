@@ -200,7 +200,7 @@ export default function DocumentDetailPage(): React.JSX.Element {
           <>
             <DocumentEditor
               documentId={documentId}
-              myRole={realtime.myRole ?? document.myRole}
+              myRole={effectiveRole}
               snapshot={realtime.snapshot}
               participants={participants}
             />

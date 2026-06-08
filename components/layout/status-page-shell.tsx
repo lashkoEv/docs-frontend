@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { LogoLink } from '@/components/brand/logo-link';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { copyrightLine } from '@/lib/shared';
 
 interface StatusPageShellProps {
   children: React.ReactNode;
@@ -25,7 +26,7 @@ export function StatusPageShell({ children }: StatusPageShellProps): React.JSX.E
 
       <footer className="text-muted-foreground border-border mt-auto border-t px-6 py-6 text-xs sm:px-10">
         <div className="mx-auto max-w-5xl">
-          © {new Date().getFullYear()} Docs Lite — Yevheniia Lashko
+          {copyrightLine()}
         </div>
       </footer>
     </div>

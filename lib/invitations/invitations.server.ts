@@ -1,10 +1,6 @@
-import { API_URL } from '@/lib/shared';
+import { API_PREFIX, API_URL, type DataResponse } from '@/lib/shared';
 
 import type { InvitationPreview } from './invitations.types';
-
-interface DataResponse<T> {
-  data: T;
-}
 
 export interface InvitationPreviewResult {
   ok: boolean;
@@ -16,7 +12,7 @@ export async function fetchInvitationPreview(
   token: string,
 ): Promise<InvitationPreviewResult> {
   try {
-    const response = await fetch(`${API_URL}/api/v1/invitations/${token}`, {
+    const response = await fetch(`${API_URL}${API_PREFIX}/invitations/${token}`, {
       cache: 'no-store',
     });
 

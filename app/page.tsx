@@ -5,7 +5,7 @@ import { Logo } from '@/components/brand/logo';
 import { LogoLink } from '@/components/brand/logo-link';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { APP_ROUTES, LANDING_FEATURES } from '@/lib/shared';
+import { APP_ROUTES, copyrightLine, LANDING_FEATURES } from '@/lib/shared';
 
 export default function HomePage(): React.JSX.Element {
   return (
@@ -85,7 +85,7 @@ export default function HomePage(): React.JSX.Element {
 
       <footer className="border-border text-muted-foreground mt-auto border-t px-6 py-6 text-xs sm:px-10">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
-          <span>© {new Date().getFullYear()} Docs Lite — Yevheniia Lashko</span>
+          <span>{copyrightLine()}</span>
           <Logo variant="mark" className="opacity-50" />
         </div>
       </footer>

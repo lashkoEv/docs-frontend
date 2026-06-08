@@ -5,7 +5,7 @@ import Link from 'next/link';
 import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
-import { DocumentRole } from '@/lib/documents';
+import { DOCUMENT_ROLE_LABELS, DocumentRole } from '@/lib/documents';
 import {
   type Notification,
   NotificationType,
@@ -15,17 +15,11 @@ import { realtimeClient } from '@/lib/realtime';
 import { APP_ROUTES, formatShortDate } from '@/lib/shared';
 import { cn } from '@/lib/utils';
 
-const ROLE_LABELS: Record<DocumentRole, string> = {
-  [DocumentRole.OWNER]: 'owner',
-  [DocumentRole.EDITOR]: 'editor',
-  [DocumentRole.VIEWER]: 'viewer',
-};
-
 function roleLabel(role: DocumentRole | null | undefined): string {
   if (role === null || role === undefined) {
     return 'access';
   }
-  return ROLE_LABELS[role] ?? 'access';
+  return DOCUMENT_ROLE_LABELS[role].toLowerCase();
 }
 
 export function NotificationsBell(): React.JSX.Element {

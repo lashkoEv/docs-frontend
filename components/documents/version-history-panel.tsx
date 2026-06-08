@@ -10,8 +10,8 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { isApiError } from '@/lib/api/errors';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { getErrorMessage, toastApiError } from '@/lib/api/errors';
 import {
   type Document,
   type DocumentVersion,
@@ -161,7 +161,7 @@ export function VersionHistoryPanel({
         }
       } catch (error) {
         if (!cancelled) {
-          toast.error(isApiError(error) ? error.message : 'Unable to load history.');
+          toastApiError(error, 'Unable to load history.');
         }
       } finally {
         if (!cancelled) {
@@ -253,13 +253,7 @@ export function VersionHistoryPanel({
         highlighted: buildHighlightedDelta(currentDelta, previousDelta),
       });
     } catch (error) {
-      const message = isApiError(error)
-        ? error.message
-        : error instanceof Error
-          ? error.message
-          : 'Unable to load version.';
-      console.error('[version-history] load version failed', error);
-      toast.error(message);
+      toast.error(getErrorMessage(error, 'Unable to load version.'));
     } finally {
       setIsPreviewLoading(false);
     }
@@ -276,7 +270,7 @@ export function VersionHistoryPanel({
       onRestored();
       onOpenChange(false);
     } catch (error) {
-      toast.error(isApiError(error) ? error.message : 'Unable to restore version.');
+      toastApiError(error, 'Unable to restore version.');
     } finally {
       setIsRestoring(false);
     }

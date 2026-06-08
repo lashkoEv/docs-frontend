@@ -28,6 +28,9 @@ export class ApiError extends Error {
 
 export const isApiError = (value: unknown): value is ApiError => value instanceof ApiError;
 
+export const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error ? error.message : fallback;
+
 export const toastApiError = (error: unknown, fallback: string): void => {
   toast.error(isApiError(error) ? error.message : fallback);
 };

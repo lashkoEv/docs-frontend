@@ -1,13 +1,6 @@
-import type { FileInfo } from '@/lib/files';
+import type { User } from '@/lib/users/users.types';
 
-export interface AuthUser {
-  id: number;
-  email: string;
-  displayName: string;
-  avatar: FileInfo | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type AuthUser = User;
 
 export interface SessionTokens {
   accessToken: string;

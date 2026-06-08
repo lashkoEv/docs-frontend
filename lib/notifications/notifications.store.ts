@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import { nowIso } from '@/lib/shared';
+
 import { notificationsApi } from './notifications.api';
 import type { Notification } from './notifications.types';
 
@@ -46,7 +48,7 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
     }
     set({
       items: get().items.map((item) =>
-        item.id === id ? { ...item, readAt: new Date().toISOString() } : item,
+        item.id === id ? { ...item, readAt: nowIso() } : item,
       ),
       unreadCount: Math.max(0, get().unreadCount - 1),
     });
@@ -61,7 +63,7 @@ export const useNotificationsStore = create<NotificationsState>()((set, get) => 
     if (get().unreadCount === 0) {
       return;
     }
-    const readAt = new Date().toISOString();
+    const readAt = nowIso();
     set({
       items: get().items.map((item) => (item.readAt ? item : { ...item, readAt })),
       unreadCount: 0,

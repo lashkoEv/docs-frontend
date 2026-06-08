@@ -2,6 +2,8 @@ import { CheckCircle2, Cloud, History, Users } from 'lucide-react';
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
+export const API_PREFIX = '/api/v1';
+
 export const APP_ROUTES = {
   HOME: '/',
   LOGIN: '/login',

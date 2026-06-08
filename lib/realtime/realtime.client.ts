@@ -5,7 +5,13 @@ import { useAuthStore } from '@/lib/auth';
 import type { Notification } from '@/lib/notifications';
 import { API_URL } from '@/lib/shared';
 
-import { realtimeEvents, REALTIME_NAMESPACE } from './realtime.constants';
+import {
+  AUTH_ERROR_RE,
+  REALTIME_ACK_TIMEOUT_MS,
+  realtimeEvents,
+  REALTIME_NAMESPACE,
+  socketReconnect,
+} from './realtime.constants';
 import { useRealtimeStore } from './realtime.store';
 import type {
   DocumentCatchupAck,
@@ -31,8 +37,6 @@ let isRecoveringAuth = false;
 let hasEstablishedConnection = false;
 let consumers = 0;
 
-const AUTH_ERROR_RE = /auth|token|jwt|unauthorized|expired/i;
-
 type RemoteOperationHandler = (event: DocumentOperationBroadcast) => void;
 type ResyncHandler = (event: DocumentResyncEvent) => void;
 type DeletedHandler = (event: DocumentDeletedEvent) => void;
@@ -57,6 +61,10 @@ const presenceCursorHandlers = new Set<PresenceCursorHandler>();
 const notificationNewHandlers = new Set<NotificationNewHandler>();
 const connectionLostHandlers = new Set<ConnectionHandler>();
 const reconnectedHandlers = new Set<ConnectionHandler>();
+
+const emit = <Event>(handlers: Set<(event: Event) => void>, event: Event): void => {
+  handlers.forEach((handler) => handler(event));
+};
 
 const attemptReconnect = (): void => {
   if (!socket) {
@@ -95,11 +103,11 @@ const ensureSocket = (): Socket => {
     autoConnect: false,
     reconnection: true,
     reconnectionAttempts: Infinity,
-    reconnectionDelay: 500,
-    reconnectionDelayMax: 5000,
-    auth: (cb) => {
+    reconnectionDelay: socketReconnect.delayMs,
+    reconnectionDelayMax: socketReconnect.delayMaxMs,
+    auth: (callback) => {
       const token = useAuthStore.getState().accessToken;
-      cb({ token: token ?? '' });
+      callback({ token: token ?? '' });
     },
   });
 
@@ -154,34 +162,34 @@ const ensureSocket = (): Socket => {
   });
 
   socket.on(realtimeEvents.PRESENCE_STATE, (event: PresenceStateEvent) => {
-    presenceStateHandlers.forEach((handler) => handler(event));
+    emit(presenceStateHandlers, event);
   });
 
   socket.on(realtimeEvents.PRESENCE_JOINED, (event: PresenceJoinedEvent) => {
-    presenceJoinedHandlers.forEach((handler) => handler(event));
+    emit(presenceJoinedHandlers, event);
   });
 
   socket.on(realtimeEvents.PRESENCE_LEFT, (event: PresenceLeftEvent) => {
-    presenceLeftHandlers.forEach((handler) => handler(event));
+    emit(presenceLeftHandlers, event);
   });
 
   socket.on(realtimeEvents.PRESENCE_CURSOR, (event: PresenceCursorEvent) => {
-    presenceCursorHandlers.forEach((handler) => handler(event));
+    emit(presenceCursorHandlers, event);
   });
 
   socket.on(
     realtimeEvents.DOCUMENT_OPERATION,
     (event: DocumentOperationBroadcast) => {
-      remoteOperationHandlers.forEach((handler) => handler(event));
+      emit(remoteOperationHandlers, event);
     },
   );
 
   socket.on(realtimeEvents.DOCUMENT_RESYNC, (event: DocumentResyncEvent) => {
-    resyncHandlers.forEach((handler) => handler(event));
+    emit(resyncHandlers, event);
   });
 
   socket.on(realtimeEvents.DOCUMENT_DELETED, (event: DocumentDeletedEvent) => {
-    deletedHandlers.forEach((handler) => handler(event));
+    emit(deletedHandlers, event);
   });
 
   socket.on(
@@ -191,25 +199,29 @@ const ensureSocket = (): Socket => {
       if (state.joinedDocumentId === event.documentId) {
         state.setMyRole(event.role);
       }
-      roleChangedHandlers.forEach((handler) => handler(event));
+      emit(roleChangedHandlers, event);
     },
   );
 
   socket.on(
     realtimeEvents.DOCUMENT_LIST_CHANGED,
     (event: DocumentListChangedEvent) => {
-      listChangedHandlers.forEach((handler) => handler(event));
+      emit(listChangedHandlers, event);
     },
   );
 
   socket.on(realtimeEvents.NOTIFICATION_NEW, (notification: Notification) => {
-    notificationNewHandlers.forEach((handler) => handler(notification));
+    emit(notificationNewHandlers, notification);
   });
 
   return socket;
 };
 
-const emitWithAck = <T>(event: string, payload: unknown, timeoutMs = 5000): Promise<T> => {
+const emitWithAck = <T>(
+  event: string,
+  payload: unknown,
+  timeoutMs = REALTIME_ACK_TIMEOUT_MS,
+): Promise<T> => {
   const sock = ensureSocket();
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Realtime ack timeout')), timeoutMs);
