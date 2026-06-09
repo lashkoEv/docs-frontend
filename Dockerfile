@@ -1,9 +1,9 @@
-FROM node:20-alpine AS deps
+FROM public.ecr.aws/docker/library/node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-FROM node:20-alpine AS builder
+FROM public.ecr.aws/docker/library/node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -14,7 +14,7 @@ ENV NEXT_PUBLIC_S3_PUBLIC_URL=${NEXT_PUBLIC_S3_PUBLIC_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-FROM node:20-alpine AS runtime
+FROM public.ecr.aws/docker/library/node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
