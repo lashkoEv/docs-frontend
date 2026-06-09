@@ -1,0 +1,31 @@
+stages:
+  - lint
+  - deploy
+
+lint:
+  stage: lint
+  image: node:23-alpine
+  script:
+    - npm ci
+    - npx eslint --max-warnings=0
+
+deploy:
+  stage: deploy
+  image:
+    name: amazon/aws-cli:latest
+    entrypoint: [""]
+  script:
+    - BUILD_ID=$(aws codebuild start-build --project-name "$CODEBUILD_PROJECT" --query 'build.id' --output text)
+    - echo "Started CodeBuild $BUILD_ID"
+    - |
+      while true; do
+        STATUS=$(aws codebuild batch-get-builds --ids "$BUILD_ID" --query 'builds[0].buildStatus' --output text)
+        echo "CodeBuild status: $STATUS"
+        case "$STATUS" in
+          SUCCEEDED) break ;;
+          IN_PROGRESS) sleep 15 ;;
+          *) echo "CodeBuild failed: $STATUS"; exit 1 ;;
+        esac
+      done
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
