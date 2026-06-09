@@ -1,6 +1,11 @@
 stages:
   - lint
+  - package
   - deploy
+
+variables:
+  SOURCE_BUCKET: docs-codebuild-source-262981515095
+  SOURCE_KEY: docs-frontend/source.zip
 
 lint:
   stage: lint
@@ -8,6 +13,19 @@ lint:
   script:
     - npm ci
     - npx eslint --max-warnings=0
+
+package:
+  stage: package
+  image:
+    name: amazon/aws-cli:latest
+    entrypoint: [""]
+  before_script:
+    - yum install -y zip
+  script:
+    - zip -r source.zip . -x '.git/*' 'node_modules/*'
+    - aws s3 cp source.zip "s3://$SOURCE_BUCKET/$SOURCE_KEY"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
 
 deploy:
   stage: deploy
@@ -24,7 +42,7 @@ deploy:
         case "$STATUS" in
           SUCCEEDED) break ;;
           IN_PROGRESS) sleep 15 ;;
-          *) echo "CodeBuild failed: $STATUS"; exit 1 ;;
+          *) echo "CodeBuild failed with status $STATUS"; exit 1 ;;
         esac
       done
   rules:
